@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="10">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Score Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f3f5; color: #333; }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2 { color: #333; }
+        .description { font-size: 1.1em; margin-bottom: 20px; color: #555; }
+        .dashboard { display: flex; gap: 20px; }
+        .charts { display: flex; flex-direction: column; align-items: center; width: 45%; gap: 20px; }
+        .pie-chart, .account-chart { width: 100%; max-width: 400px; }
+        .total-count { font-size: 1.2em; margin-bottom: 15px; color: #333; font-weight: bold; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .transactions { width: 55%; max-height: 600px; overflow-y: auto; background-color: #fff; border-radius: 8px; padding: 10px; }
+        .account-type { font-weight: bold; color: #007acc; font-size: 1.1em; }
+        .footer { margin-top: 30px; font-size: 0.9em; color: #888; text-align: center; }
+        .error-message { color: red; font-size: 1.2em; margin-top: 20px; }
+        .no-data { color: #888; font-size: 1.2em; margin-top: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Credit Score Dashboard</h1>
+        <p class="description">This dashboard provides insights into processed transactions for risk analysis. Data is sourced from a live API, categorizing risk scores and analyzing account types.</p>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div id="totalCount" class="total-count"></div>
+
+        <!-- Main Dashboard Layout -->
+        <div class="dashboard">
+            <!-- Transaction Table -->
+            <div class="transactions">
+                <h2>Last 100 Transactions</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Account Type</th>
+                            <th>Amount</th>
+                            <th>State</th>
+                            <th>Type</th>
+                            <th>Risk Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody"></tbody>
+                </table>
+                <p id="noDataMessage" class="no-data"></p>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts">
+                <!-- Risk Score Pie Chart -->
+                <div class="pie-chart">
+                    <canvas id="riskChart"></canvas>
+                </div>
+                <!-- Account Type Stacked Bar Chart -->
+                <div class="account-chart">
+                    <canvas id="accountTypeRiskChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Dashboard Version: 1.2</p>
+        </div>
+    </div>
+
+    <script src="/static/chart.js"></script>
+    <script>
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard-data');
+                if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+                const data = await response.json();
+                updateTotalCount(data);
+                updatePieChart(data.risk_below_50, data.risk_above_50);
+                updateAccountTypeRiskChart(data.last_records);
+                updateTransactionTable(data.last_records);
+                document.getElementById("errorMessage").textContent = "";
+            } catch (error) {
+                document.getElementById("errorMessage").textContent = "Failed to load data. Check server logs.";
+            }
+        }
+
+        function updateTotalCount(data) {
+            const totalCount = data.risk_below_50 + data.risk_above_50;
+            const below50Percent = ((data.risk_below_50 / totalCount) * 100).toFixed(1);
+            const above50Percent = ((data.risk_above_50 / totalCount) * 100).toFixed(1);
+            document.getElementById("totalCount").textContent = `Total Transactions Processed: ${totalCount} (Risk < 50: ${below50Percent}%, Risk >= 50: ${above50Percent}%)`;
+        }
+
+        function updatePieChart(riskBelow50, riskAbove50) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            if (window.riskChart instanceof Chart) window.riskChart.destroy();
+
+            window.riskChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: [`Risk < 50 (${((riskBelow50 / (riskBelow50 + riskAbove50)) * 100).toFixed(1)}%)`,
+                             `Risk >= 50 (${((riskAbove50 / (riskBelow50 + riskAbove50)) * 100).toFixed(1)}%)`],
+                    datasets: [{
+                        data: [riskBelow50, riskAbove50],
+                        backgroundColor: ['#4CAF50', '#FF5252']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'top' }}}
+            });
+        }
+
+        function updateAccountTypeRiskChart(transactions) {
+            const accountTypeCounts = {
+                CHECKING: { risky: 0, notRisky: 0 },
+                SAVINGS: { risky: 0, notRisky: 0 },
+                LOAN: { risky: 0, notRisky: 0 }
+            };
+
+            transactions.forEach(t => {
+                const riskCategory = t.risk_score >= 50 ? 'risky' : 'notRisky';
+                accountTypeCounts[t.account_type][riskCategory] += 1;
+            });
+
+            const labels = ["CHECKING", "SAVINGS", "LOAN"];
+            const riskyData = labels.map(label => accountTypeCounts[label].risky);
+            const notRiskyData = labels.map(label => accountTypeCounts[label].notRisky);
+
+            const ctx = document.getElementById('accountTypeRiskChart').getContext('2d');
+            if (window.accountTypeRiskChart instanceof Chart) window.accountTypeRiskChart.destroy();
+
+            window.accountTypeRiskChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Not Risky (Risk < 50)', data: notRiskyData, backgroundColor: '#4CAF50' },
+                        { label: 'Risky (Risk >= 50)', data: riskyData, backgroundColor: '#FF5252' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { position: 'top' } },
+                    indexAxis: 'y',
+                }
+            });
+        }
+
+        function updateTransactionTable(transactions) {
+            const tableBody = document.getElementById('transactionTableBody');
+            const noDataMessage = document.getElementById('noDataMessage');
+            tableBody.innerHTML = '';
+
+            if (transactions.length > 0) {
+                transactions.slice(-100).forEach((transaction) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${transaction.timestamp}</td>
+                        <td class="account-type">${transaction.account_type}</td>
+                        <td>$${transaction.amount.toFixed(2)}</td>
+                        <td>${transaction.state || 'N/A'}</td>
+                        <td>${transaction.type}</td>
+                        <td>${transaction.risk_score}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                noDataMessage.textContent = '';
+            } else {
+                const lastUpdateTime = new Date();
+                noDataMessage.textContent = `No data received since ${lastUpdateTime.toLocaleTimeString()}`;
+            }
+        }
+
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 10000);
+    </script>
+</body>
+</html>
+

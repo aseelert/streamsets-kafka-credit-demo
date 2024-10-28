@@ -1,0 +1,111 @@
+networks:
+  streamsets-network:
+    driver: bridge
+
+services:
+  kafka:
+    image: 'bitnami/kafka:latest'
+    networks:
+      - streamsets-network
+    environment:
+      # Enable KRaft mode
+      - KAFKA_CFG_KRAFT=true
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=EXTERNAL://0.0.0.0:9192,INTERNAL://kafka:9194,LOCAL://localhost:9195,CONTROLLER://0.0.0.0:9193
+      - KAFKA_CFG_ADVERTISED_LISTENERS=EXTERNAL://9.153.103.108:9192,INTERNAL://kafka:9194,LOCAL://localhost:9195
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT,LOCAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9193
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    ports:
+      - 9192:9192
+      - 9193:9193
+      - 9194:9194
+      - 9195:9195
+
+  kafka_ui:
+    image: provectuslabs/kafka-ui:latest
+    networks:
+      - streamsets-network
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=Local_Kafka
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9194
+    ports:
+      - 8194:8080
+
+  postgres:
+    image: postgres:latest
+    networks:
+      - streamsets-network
+    environment:
+      POSTGRES_USER: fraud_user
+      POSTGRES_PASSWORD: fraud_pass
+      POSTGRES_DB: fraud_detection
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 5542:5432
+
+  postgres_ui:
+    image: dpage/pgadmin4:latest
+    networks:
+      - streamsets-network
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: IBM4ever
+    ports:
+      - 5150:80
+    depends_on:
+      - postgres
+      - postgres_usecase2
+
+  postgres_usecase2:
+    image: postgres:latest
+    networks:
+      - streamsets-network
+    environment:
+      POSTGRES_USER: usercase2_user
+      POSTGRES_PASSWORD: IBM4ever
+      POSTGRES_DB: usecase2_db
+    ports:
+      - 5543:5432
+
+  minio:
+    image: minio/minio:latest
+    networks:
+      - streamsets-network
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=IBM4ever
+    command: server /data --console-address ":9101"
+    ports:
+      - 9100:9000
+      - 9101:9101
+
+  streamsets:
+    image: streamsets/datacollector:JDK17_5.11.0
+    container_name: credit_score_streamsets
+    environment:
+      - STREAMSETS_DEPLOYMENT_SCH_URL=${STREAMSETS_DEPLOYMENT_SCH_URL}
+      - STREAMSETS_DEPLOYMENT_ID=${STREAMSETS_DEPLOYMENT_ID}
+      - STREAMSETS_DEPLOYMENT_TOKEN=${STREAMSETS_DEPLOYMENT_TOKEN}
+    restart: always
+    ports:
+      - "18630:18630"
+    networks:
+      - streamsets-network
+
+  credit_score_api:
+    build:
+      context: ../credit-endpoint
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: always
+    container_name: credit_score_api
+    networks:
+      - streamsets-network
+

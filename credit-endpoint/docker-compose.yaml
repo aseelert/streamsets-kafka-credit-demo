@@ -1,0 +1,12 @@
+services:
+  credit_score_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: always
+    container_name: credit_score_api
+
