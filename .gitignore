@@ -1,17 +1,27 @@
-# Python environment
+# Python cache and virtual environments
 *.pyc
-__pycache__/
 *.pyo
-
-# Local virtual environment
+*.pyd
+__pycache__/
 venv/
-.env  # if sensitive environment variables are stored here
+*.env
 
-# Logs
-logs/
-*.log
+# Docker
+docker/*.tar
+docker/*.bak
+docker/.env
+docker-compose.override.yml
 
-# Build and cache
-build/
-dist/
-*.egg-info/
+# Project-specific files
+credit-endpoint/logs/
+credit-endpoint/build/
+credit-endpoint/dist/
+credit-endpoint/*.log
+kafka/*.log
+kafka/*.out
+kafka/tmp/
+kafka/data/
+
+# OS generated files
+.DS_Store
+Thumbs.db
