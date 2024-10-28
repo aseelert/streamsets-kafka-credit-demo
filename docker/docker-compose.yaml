@@ -9,8 +9,8 @@ services:
       - .env  # Load environment variables from the .env file
     networks:
       - streamsets-network
+    container_name: ibmas-ss-kafka
     environment:
-      # Enable KRaft mode
       - KAFKA_CFG_KRAFT=true
       - KAFKA_CFG_NODE_ID=0
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
@@ -29,6 +29,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     networks:
       - streamsets-network
+    container_name: ibmas-ss-kafka_ui
     environment:
       - KAFKA_CLUSTERS_0_NAME=Local_Kafka
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9194
@@ -39,6 +40,7 @@ services:
     image: postgres:latest
     networks:
       - streamsets-network
+    container_name: ibmas-ss-postgres
     environment:
       POSTGRES_USER: fraud_user
       POSTGRES_PASSWORD: fraud_pass
@@ -52,6 +54,7 @@ services:
     image: dpage/pgadmin4:latest
     networks:
       - streamsets-network
+    container_name: ibmas-ss-postgres_ui
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: ${DEFAULT_PASSWORD}
@@ -64,6 +67,7 @@ services:
     image: minio/minio:latest
     networks:
       - streamsets-network
+    container_name: ibmas-ss-minio
     environment:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=${DEFAULT_PASSWORD}
@@ -74,7 +78,7 @@ services:
 
   streamsets:
     image: streamsets/datacollector:JDK17_5.11.0
-    container_name: credit_score_streamsets
+    container_name: ibmas-ss-streamsets
     env_file:
       - .env  # Load environment variables from the .env file
     restart: always
@@ -87,12 +91,11 @@ services:
     build:
       context: ../credit-endpoint
       dockerfile: Dockerfile
+    container_name: ibmas-ss-credit_score_api
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
     restart: always
-    container_name: credit_score_api
     networks:
       - streamsets-network
-
