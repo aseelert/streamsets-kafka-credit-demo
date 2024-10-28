@@ -1,1 +1,17 @@
-venv
+# Python environment
+*.pyc
+__pycache__/
+*.pyo
+
+# Local virtual environment
+venv/
+.env  # if sensitive environment variables are stored here
+
+# Logs
+logs/
+*.log
+
+# Build and cache
+build/
+dist/
+*.egg-info/
