@@ -111,6 +111,8 @@ services:
     image: metabase/metabase:latest
     container_name: ibmas-ss-metabase
     hostname: metabase
+    environment:
+      - MB_DB_FILE=/metabase-data/metabase.db
     volumes:
       - metabase_data:/metabase-data  # Persistent storage for Metabase data
       - /dev/urandom:/dev/random:ro
