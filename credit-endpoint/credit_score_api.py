@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from datetime import datetime
 import random
-from typing import Optional
+from typing import Optional, List
 import logging
 
 # Function to check if the app is running inside Docker

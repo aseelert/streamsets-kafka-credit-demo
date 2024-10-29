@@ -9,23 +9,27 @@
         body { font-family: Arial, sans-serif; background-color: #f0f3f5; color: #333; }
         .container { max-width: 1200px; margin: auto; padding: 20px; }
         h1, h2 { color: #333; }
-        .description { font-size: 1.1em; margin-bottom: 20px; color: #555; }
+        .description { font-size: 0.8em; margin-bottom: 20px; color: #555; }
         .dashboard { display: flex; gap: 20px; }
         .charts { display: flex; flex-direction: column; align-items: center; width: 45%; gap: 20px; }
         .pie-chart, .account-chart { width: 100%; max-width: 400px; }
-        .total-count { font-size: 1.2em; margin-bottom: 15px; color: #333; font-weight: bold; text-align: center; }
+        .total-count { font-size: 0.8em; margin-bottom: 15px; color: #333; font-weight: bold; text-align: center; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #f4f4f4; }
-        .transactions { width: 55%; max-height: 600px; overflow-y: auto; background-color: #fff; border-radius: 8px; padding: 10px; }
+        .transactions { font-size: 0.8em; width: 55%; max-height: 600px; overflow-y: auto; background-color: #fff; border-radius: 8px; padding: 10px; }
         .account-type { font-weight: bold; color: #007acc; font-size: 1.1em; }
         .footer { margin-top: 30px; font-size: 0.9em; color: #888; text-align: center; }
         .error-message { color: red; font-size: 1.2em; margin-top: 20px; }
         .no-data { color: #888; font-size: 1.2em; margin-top: 20px; text-align: center; }
-        /* State risk coloring */
-        .high-risk { background-color: #FFCCCC; } /* Red for high-risk states */
-        .medium-risk { background-color: #FFEDCC; } /* Orange for medium-risk states */
-        .low-risk { background-color: #E0E0E0; } /* Gray for low-risk states */
+
+        /* State risk table styling */
+        .legend-table { width: 100%; margin-top: 20px; }
+        .legend-table, .legend-table th, .legend-table td { border: 1px solid #ddd; border-collapse: collapse; padding: 8px; text-align: left; }
+        .legend-table th { background-color: #f4f4f4; font-weight: bold; color: #333; }
+        .high-risk { font-size: 0.8em;background-color: #FFCCCC; } /* Red for high-risk states */
+        .medium-risk { font-size: 0.8em;background-color: #FFEDCC; } /* Orange for medium-risk states */
+        .low-risk { font-size: 0.8em;background-color: #E0E0E0; } /* Gray for low-risk states */
     </style>
 </head>
 <body>
@@ -36,28 +40,40 @@
         <div class="error-message" id="errorMessage"></div>
         <div id="totalCount" class="total-count"></div>
 
-        <!-- Legend Section for State Risk Levels -->
-        <div class="legend">
-            <h3>State Risk Levels</h3>
-            <div class="legend-item"><span class="legend-color high-color"></span>High-Risk States:
-                CA (California - economic volatility), NY (New York - high unemployment),
-                TX (Texas - oil industry impact), FL (Florida - high tourism dependence),
-                NV (Nevada - gambling industry), IL (Illinois - state debt challenges)
-            </div>
-            <div class="legend-item"><span class="legend-color medium-color"></span>Medium-Risk States:
-                OH (Ohio), MI (Michigan - manufacturing impact), PA (Pennsylvania), GA (Georgia), AZ (Arizona)
-            </div>
-            <div class="legend-item"><span class="legend-color low-color"></span>Low-Risk States:
-                VT (Vermont), ND (North Dakota), SD (South Dakota), ID (Idaho), NE (Nebraska)
-            </div>
-            <p>States are categorized based on economic factors, unemployment rates, and historical risk trends that influence the overall risk score.</p>
-        </div>
+        <!-- State Risk Levels Legend in Tabular Format -->
+        <h2>State Risk Levels</h2>
+        <table class="legend-table">
+            <thead>
+                <tr>
+                    <th>Risk Level</th>
+                    <th>State</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="high-risk">
+                    <td>High-Risk</td>
+                    <td>CA (California), NY (New York), TX (Texas), FL (Florida), NV (Nevada), IL (Illinois)</td>
+                    <td>Economic volatility, industry dependence (e.g., tech, tourism, oil)</td>
+                </tr>
+                <tr class="medium-risk">
+                    <td>Medium-Risk</td>
+                    <td>OH (Ohio), MI (Michigan), PA (Pennsylvania), GA (Georgia), AZ (Arizona)</td>
+                    <td>Moderate risk due to industry-specific dependencies like manufacturing</td>
+                </tr>
+                <tr class="low-risk">
+                    <td>Low-Risk</td>
+                    <td>VT (Vermont), ND (North Dakota), SD (South Dakota), ID (Idaho), NE (Nebraska)</td>
+                    <td>Generally stable economies, lower susceptibility to economic fluctuations</td>
+                </tr>
+            </tbody>
+        </table>
 
         <!-- Main Dashboard Layout with Transactions Table and Charts -->
         <div class="dashboard">
             <!-- Transaction Table -->
             <div class="transactions">
-                <h2>Last 100 Transactions</h2>
+                <h2>Last 1000 Transactions</h2>
                 <table>
                     <thead>
                         <tr>
@@ -173,11 +189,10 @@
             const tableBody = document.getElementById('transactionTableBody');
             tableBody.innerHTML = '';
 
-            transactions.slice(-100).forEach((transaction) => {
+            transactions.slice(-1000).forEach((transaction) => {
                 const row = document.createElement('tr');
                 let stateClass = '';
 
-                // Assign a color-coded class based on risk level
                 if (highRiskStates.includes(transaction.state)) {
                     stateClass = 'high-risk';
                 } else if (mediumRiskStates.includes(transaction.state)) {
