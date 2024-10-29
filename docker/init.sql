@@ -1,5 +1,5 @@
 -- init.sql
-CREATE TABLE financial_transactions (
+CREATE TABLE IF NOT EXISTS financial_transactions (
     firstname VARCHAR(50),
     lastname VARCHAR(50),
     name VARCHAR(100),

@@ -22,6 +22,10 @@
         .footer { margin-top: 30px; font-size: 0.9em; color: #888; text-align: center; }
         .error-message { color: red; font-size: 1.2em; margin-top: 20px; }
         .no-data { color: #888; font-size: 1.2em; margin-top: 20px; text-align: center; }
+        /* State risk coloring */
+        .high-risk { background-color: #FFCCCC; } /* Red for high-risk states */
+        .medium-risk { background-color: #FFEDCC; } /* Orange for medium-risk states */
+        .low-risk { background-color: #E0E0E0; } /* Gray for low-risk states */
     </style>
 </head>
 <body>
@@ -32,7 +36,24 @@
         <div class="error-message" id="errorMessage"></div>
         <div id="totalCount" class="total-count"></div>
 
-        <!-- Main Dashboard Layout -->
+        <!-- Legend Section for State Risk Levels -->
+        <div class="legend">
+            <h3>State Risk Levels</h3>
+            <div class="legend-item"><span class="legend-color high-color"></span>High-Risk States:
+                CA (California - economic volatility), NY (New York - high unemployment),
+                TX (Texas - oil industry impact), FL (Florida - high tourism dependence),
+                NV (Nevada - gambling industry), IL (Illinois - state debt challenges)
+            </div>
+            <div class="legend-item"><span class="legend-color medium-color"></span>Medium-Risk States:
+                OH (Ohio), MI (Michigan - manufacturing impact), PA (Pennsylvania), GA (Georgia), AZ (Arizona)
+            </div>
+            <div class="legend-item"><span class="legend-color low-color"></span>Low-Risk States:
+                VT (Vermont), ND (North Dakota), SD (South Dakota), ID (Idaho), NE (Nebraska)
+            </div>
+            <p>States are categorized based on economic factors, unemployment rates, and historical risk trends that influence the overall risk score.</p>
+        </div>
+
+        <!-- Main Dashboard Layout with Transactions Table and Charts -->
         <div class="dashboard">
             <!-- Transaction Table -->
             <div class="transactions">
@@ -55,14 +76,8 @@
 
             <!-- Charts Section -->
             <div class="charts">
-                <!-- Risk Score Pie Chart -->
-                <div class="pie-chart">
-                    <canvas id="riskChart"></canvas>
-                </div>
-                <!-- Account Type Stacked Bar Chart -->
-                <div class="account-chart">
-                    <canvas id="accountTypeRiskChart"></canvas>
-                </div>
+                <div class="pie-chart"><canvas id="riskChart"></canvas></div>
+                <div class="account-chart"><canvas id="accountTypeRiskChart"></canvas></div>
             </div>
         </div>
 
@@ -73,6 +88,10 @@
 
     <script src="/static/chart.js"></script>
     <script>
+        const highRiskStates = ["CA", "NY", "TX", "FL", "NV", "IL"];
+        const mediumRiskStates = ["OH", "MI", "PA", "GA", "AZ"];
+        const lowRiskStates = ["VT", "ND", "SD", "ID", "NE"];
+
         async function fetchDashboardData() {
             try {
                 const response = await fetch('/api/dashboard-data');
@@ -152,27 +171,31 @@
 
         function updateTransactionTable(transactions) {
             const tableBody = document.getElementById('transactionTableBody');
-            const noDataMessage = document.getElementById('noDataMessage');
             tableBody.innerHTML = '';
 
-            if (transactions.length > 0) {
-                transactions.slice(-100).forEach((transaction) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${transaction.timestamp}</td>
-                        <td class="account-type">${transaction.account_type}</td>
-                        <td>$${transaction.amount.toFixed(2)}</td>
-                        <td>${transaction.state || 'N/A'}</td>
-                        <td>${transaction.type}</td>
-                        <td>${transaction.risk_score}</td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-                noDataMessage.textContent = '';
-            } else {
-                const lastUpdateTime = new Date();
-                noDataMessage.textContent = `No data received since ${lastUpdateTime.toLocaleTimeString()}`;
-            }
+            transactions.slice(-100).forEach((transaction) => {
+                const row = document.createElement('tr');
+                let stateClass = '';
+
+                // Assign a color-coded class based on risk level
+                if (highRiskStates.includes(transaction.state)) {
+                    stateClass = 'high-risk';
+                } else if (mediumRiskStates.includes(transaction.state)) {
+                    stateClass = 'medium-risk';
+                } else if (lowRiskStates.includes(transaction.state)) {
+                    stateClass = 'low-risk';
+                }
+
+                row.innerHTML = `
+                    <td>${transaction.timestamp}</td>
+                    <td class="account-type">${transaction.account_type}</td>
+                    <td>$${transaction.amount.toFixed(2)}</td>
+                    <td class="${stateClass}">${transaction.state || 'N/A'}</td>
+                    <td>${transaction.type}</td>
+                    <td>${transaction.risk_score}</td>
+                `;
+                tableBody.appendChild(row);
+            });
         }
 
         fetchDashboardData();
@@ -180,4 +203,3 @@
     </script>
 </body>
 </html>
-

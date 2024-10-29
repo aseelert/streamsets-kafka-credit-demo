@@ -48,6 +48,7 @@ services:
       POSTGRES_PASSWORD: fraud_pass
       POSTGRES_DB: fraud_detection
     volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data  # Persistent storage for PostgreSQL
     ports:
       - 5542:5432
