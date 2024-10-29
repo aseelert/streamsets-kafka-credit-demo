@@ -9,8 +9,8 @@ This project sets up a credit score processing pipeline using Docker Compose. It
 | Kafka             | Data streaming service                                        | -                  | -          | 9192, 9193, 9194, 9195 |
 | Kafka UI          | Web interface to monitor Kafka data                           | -                  | -          | 8194                    |
 | PostgreSQL        | Database for storing transactions with risk > 50              | fraud_user         | fraud_pass | 5542                    |
-| pgAdmin4          | UI to manage PostgreSQL databases                             | admin@admin.com    | IBM4ever   | 5150                    |
-| MinIO             | Object storage for Streamsets and other services              | minio              | IBM4ever   | 9100, 9101             |
+| pgAdmin4          | UI to manage PostgreSQL databases                             | admin@admin.com    | $defaultpw | 5150                    |
+| MinIO             | Object storage for Streamsets and other services              | minio              | $defaultpw | 9100, 9101             |
 | Streamsets        | Main application for processing and routing data              | -                  | -          | 18630                   |
 | Credit Score API  | API to calculate risk scores and serve a dashboard            | -                  | -          | 8000                    |
 
@@ -23,7 +23,7 @@ This project sets up a credit score processing pipeline using Docker Compose. It
    STREAMSETS_DEPLOYMENT_ID=dba9cbf0-6d10-46d8-b4af-3de2f2a921a2:08e9a095
    STREAMSETS_DEPLOYMENT_TOKEN=your_token_here
    KAFKA_CFG_ADVERTISED_LISTENERS=EXTERNAL://`real host ip`:9192,INTERNAL://kafka:9194,LOCAL://localhost:9195
-   export DEFAULT_PASSWORD=password00
+   export DEFAULT_PASSWORD= your_password
    ```
 
 3. Run the pipeline:
