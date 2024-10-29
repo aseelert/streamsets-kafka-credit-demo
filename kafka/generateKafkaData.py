@@ -10,6 +10,9 @@ from tqdm import tqdm  # for progress bar
 from dotenv import load_dotenv
 import os
 
+# Load environment variables from .env file
+load_dotenv()
+
 # Configuration variables for Kafka connection
 bootstrap_server = os.getenv("HOST_IP")
 bootstrap_server_port = 9192
