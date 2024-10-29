@@ -5,15 +5,21 @@ import time
 from faker import Faker
 import random
 from datetime import datetime
+import argparse
+from tqdm import tqdm  # for progress bar
 
 # Configuration variables for Kafka connection
 bootstrap_server = "9.153.103.108"
 bootstrap_server_port = 9192
 bootstrap_servers = f"{bootstrap_server}:{bootstrap_server_port}"
-topic_name = "txs"
 
 # Initialize Faker with only the 'en_US' locale
 fake = Faker('en_US')
+
+# Known email providers
+email_providers = ["gmail.com", "yahoo.com", "outlook.com", "mail.com",
+                   "aol.com", "icloud.com", "comcast.net", "msn.com",
+                   "live.com", "protonmail.com"]
 
 def generate_us_transaction():
     """
@@ -24,23 +30,11 @@ def generate_us_transaction():
 
     Age Group Influence:
     --------------------
-    - Younger People (<25 years):
-      - More likely to have smaller savings and checking accounts.
-      - Transaction amounts are smaller, as younger people typically have lower balances and spend
-        on day-to-day expenses.
-      - Higher probability of DEBIT transactions.
+    - Younger People (<25 years): Focus on smaller checking and savings transactions.
+    - Middle Age (25-40 years): Higher chance of loans and larger amounts.
+    - Older Adults (40+ years): Larger loans, stable savings, moderate credit.
 
-    - Middle Age (25-40 years):
-      - Likely to have a mix of checking, savings, and loan accounts.
-      - Larger loan sizes for significant purchases (e.g., homes, vehicles).
-      - More frequent CREDIT transactions for consumer goods, balanced with larger checking amounts.
-
-    - Older Adults (40+ years):
-      - More stable financial status, often with higher savings and possibly larger loan amounts
-        (e.g., mortgages).
-      - Moderate CREDIT activity for expenses but more likely larger savings deposits.
-
-    This structure aims to provide a realistic financial dataset for testing and analysis.
+    This structure provides a realistic financial dataset for testing and analysis.
     """
 
     firstname = fake.first_name()
@@ -48,32 +42,27 @@ def generate_us_transaction():
     country = "United States"
 
     # Generate email using firstname and lastname
-    email_domain = random.choice(["gmail.com", "yahoo.com", "outlook.com", "mail.com"])
-    email = f"{firstname.lower()}.{lastname.lower()}@{email_domain}"
+    email = f"{firstname.lower()}.{lastname.lower()}@{random.choice(email_providers)}"
     birthdate = fake.date_of_birth(minimum_age=18, maximum_age=85)
     age = (datetime.now().year - birthdate.year)
 
-    # Determine likely account type and amount range based on age group
+    # Determine account type and amount based on age group
     if age < 25:
-        # Younger individuals (<25): Focus on smaller transactions in checking and savings
         account_type = random.choices(["CHECKING", "SAVINGS"], weights=[0.7, 0.3], k=1)[0]
         amount = random.uniform(10, 500) if account_type == "SAVINGS" else random.uniform(10, 1000)
     elif 25 <= age < 40:
-        # Middle-aged (25-40): Higher chance of loan activity, larger amounts
         account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.5, 0.2, 0.3], k=1)[0]
-        amount = (random.uniform(100, 10000) if account_type == "LOAN" else
-                  random.uniform(100, 3000) if account_type == "CHECKING" else
-                  random.uniform(50, 1500))
+        amount = random.uniform(100, 10000) if account_type == "LOAN" else random.uniform(100, 3000) if account_type == "CHECKING" else random.uniform(50, 1500)
     else:
-        # Older adults (40+): Larger loans, stable savings, moderate credit
         account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.4, 0.3, 0.3], k=1)[0]
-        amount = (random.uniform(5000, 20000) if account_type == "LOAN" else
-                  random.uniform(200, 5000) if account_type == "CHECKING" else
-                  random.uniform(100, 3000))
+        amount = random.uniform(5000, 20000) if account_type == "LOAN" else random.uniform(200, 5000) if account_type == "CHECKING" else random.uniform(100, 3000)
 
-    # DEBIT/CREDIT probability with higher DEBIT likelihood across groups
+    # DEBIT/CREDIT probability with higher DEBIT likelihood
     tx_type = random.choices(["DEBIT", "CREDIT"], weights=[0.7, 0.3], k=1)[0]
     amount = round(amount, 2)
+
+    # Ensure realistic latitude and longitude within the U.S.
+    latitude, longitude = generate_us_coordinates()
 
     # Construct transaction data
     transaction = {
@@ -85,8 +74,8 @@ def generate_us_transaction():
         "city": fake.city(),
         "state": fake.state_abbr(),
         "address": fake.address(),
-        "latitude": float(fake.latitude()),
-        "longitude": float(fake.longitude()),
+        "latitude": latitude,
+        "longitude": longitude,
         "country": country,
         "customer_number": random.randint(100000, 999999),
         "transaction_id": random.randint(1000000000000000000, 9223372036854775807),
@@ -98,9 +87,17 @@ def generate_us_transaction():
     }
     return transaction
 
+def generate_us_coordinates():
+    """
+    Generate realistic latitude and longitude within U.S. bounds.
+    Returns approximate values for landmarks within the U.S.
+    """
+    latitude = round(random.uniform(24.396308, 49.384358), 6)   # U.S. latitude range
+    longitude = round(random.uniform(-125.0, -66.93457), 6)     # U.S. longitude range
+    return latitude, longitude
 
 # Function to create Kafka topic if it does not exist
-def create_kafka_topic():
+def create_kafka_topic(topic_name):
     try:
         admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
         topics = admin_client.list_topics()
@@ -113,8 +110,8 @@ def create_kafka_topic():
     except Exception as e:
         print(f"Error creating topic '{topic_name}': {e}")
 
-# Function to send data to Kafka in random-sized batches
-def send_data_to_kafka(retries=5):
+# Function to send data to Kafka in random-sized batches with progress tracking
+def send_data_to_kafka(total_records=10000, topic_name="txs", retries=5):
     for attempt in range(retries):
         try:
             producer = KafkaProducer(
@@ -122,26 +119,32 @@ def send_data_to_kafka(retries=5):
                 value_serializer=lambda v: json.dumps(v).encode('utf-8')
             )
             print("Successfully connected to Kafka broker.")
-            create_kafka_topic()
+            create_kafka_topic(topic_name)
 
-            while True:
-                # Generate a random number of transactions (between 500 and 1000)
-                batch_size = random.randint(500, 1000)
-                transactions = [generate_us_transaction() for _ in range(batch_size)]
-                print(f"Generated batch of {batch_size} US-based transactions")
+            # Initialize progress bar
+            with tqdm(total=total_records, desc="Sending transactions to Kafka") as pbar:
+                records_sent = 0
 
-                # Send each transaction in the batch to Kafka
-                for transaction in transactions:
-                    producer.send(topic_name, transaction)
+                while records_sent < total_records:
+                    # Generate a random batch size, constrained by remaining records
+                    batch_size = min(random.randint(500, 1000), total_records - records_sent)
+                    transactions = [generate_us_transaction() for _ in range(batch_size)]
+                    print(f"Generated batch of {batch_size} US-based transactions")
 
-                # Flush the batch to ensure all records are sent
-                producer.flush()
-                print(f"Batch of {batch_size} transactions sent to Kafka topic '{topic_name}'.")
+                    # Send each transaction in the batch to Kafka
+                    for transaction in transactions:
+                        producer.send(topic_name, transaction)
 
-                # Wait 10 seconds before the next batch
-                time.sleep(10)
+                    # Flush the batch to ensure all records are sent
+                    producer.flush()
+                    records_sent += batch_size
+                    pbar.update(batch_size)
 
-            break  # Exit loop if connection is successful
+                    # Wait 10 seconds before the next batch
+                    time.sleep(10)
+
+                print(f"Total of {total_records} transactions sent to Kafka topic '{topic_name}'.")
+                break  # Exit loop if connection is successful
 
         except Exception as e:
             print(f"Attempt {attempt + 1}: Unable to connect to Kafka or send message: {e}")
@@ -151,7 +154,11 @@ def send_data_to_kafka(retries=5):
                 print("Max retries reached. Exiting.")
                 break
 
-# Run the data generation and sending function
+# Parse command-line arguments
 if __name__ == "__main__":
-    send_data_to_kafka()
+    parser = argparse.ArgumentParser(description="Send generated transaction data to Kafka.")
+    parser.add_argument("--total_records", type=int, default=10000, help="Total number of records to send.")
+    parser.add_argument("--topic_name", type=str, default="txs", help="Kafka topic name to send data to.")
+    args = parser.parse_args()
 
+    send_data_to_kafka(total_records=args.total_records, topic_name=args.topic_name)
