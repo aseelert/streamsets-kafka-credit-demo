@@ -15,37 +15,89 @@ topic_name = "txs"
 # Initialize Faker with only the 'en_US' locale
 fake = Faker('en_US')
 
-# Function to generate sample transaction data specific to the United States
 def generate_us_transaction():
+    """
+    Generate a sample financial transaction with age-based account type and amount adjustments.
+
+    The function simulates realistic financial behavior by varying transaction types and amounts
+    based on the age of the individual:
+
+    Age Group Influence:
+    --------------------
+    - Younger People (<25 years):
+      - More likely to have smaller savings and checking accounts.
+      - Transaction amounts are smaller, as younger people typically have lower balances and spend
+        on day-to-day expenses.
+      - Higher probability of DEBIT transactions.
+
+    - Middle Age (25-40 years):
+      - Likely to have a mix of checking, savings, and loan accounts.
+      - Larger loan sizes for significant purchases (e.g., homes, vehicles).
+      - More frequent CREDIT transactions for consumer goods, balanced with larger checking amounts.
+
+    - Older Adults (40+ years):
+      - More stable financial status, often with higher savings and possibly larger loan amounts
+        (e.g., mortgages).
+      - Moderate CREDIT activity for expenses but more likely larger savings deposits.
+
+    This structure aims to provide a realistic financial dataset for testing and analysis.
+    """
+
     firstname = fake.first_name()
     lastname = fake.last_name()
-    country = "United States"  # Fixed country to United States
+    country = "United States"
 
     # Generate email using firstname and lastname
     email_domain = random.choice(["gmail.com", "yahoo.com", "outlook.com", "mail.com"])
     email = f"{firstname.lower()}.{lastname.lower()}@{email_domain}"
+    birthdate = fake.date_of_birth(minimum_age=18, maximum_age=75)
+    age = (datetime.now().year - birthdate.year)
 
+    # Determine likely account type and amount range based on age group
+    if age < 25:
+        # Younger individuals (<25): Focus on smaller transactions in checking and savings
+        account_type = random.choices(["CHECKING", "SAVINGS"], weights=[0.7, 0.3], k=1)[0]
+        amount = random.uniform(10, 500) if account_type == "SAVINGS" else random.uniform(10, 1000)
+    elif 25 <= age < 40:
+        # Middle-aged (25-40): Higher chance of loan activity, larger amounts
+        account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.5, 0.2, 0.3], k=1)[0]
+        amount = (random.uniform(100, 10000) if account_type == "LOAN" else
+                  random.uniform(100, 3000) if account_type == "CHECKING" else
+                  random.uniform(50, 1500))
+    else:
+        # Older adults (40+): Larger loans, stable savings, moderate credit
+        account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.4, 0.3, 0.3], k=1)[0]
+        amount = (random.uniform(5000, 20000) if account_type == "LOAN" else
+                  random.uniform(200, 5000) if account_type == "CHECKING" else
+                  random.uniform(100, 3000))
+
+    # DEBIT/CREDIT probability with higher DEBIT likelihood across groups
+    tx_type = random.choices(["DEBIT", "CREDIT"], weights=[0.7, 0.3], k=1)[0]
+    amount = round(amount, 2)
+
+    # Construct transaction data
     transaction = {
         "firstname": firstname,
         "lastname": lastname,
-        "name": f"{firstname} {lastname}",  # Construct name from firstname and lastname
-        "birthdate": fake.date_of_birth().strftime("%m-%d-%Y"),
-        "email": email,  # Email based on firstname and lastname
+        "name": f"{firstname} {lastname}",
+        "birthdate": birthdate.strftime("%Y-%m-%d"),
+        "email": email,
         "city": fake.city(),
-        "state": fake.state_abbr(),  # US state abbreviation
+        "state": fake.state_abbr(),
         "address": fake.address(),
-        "latitude": float(fake.latitude()),  # Latitude for US
-        "longitude": float(fake.longitude()),  # Longitude for US
+        "latitude": float(fake.latitude()),
+        "longitude": float(fake.longitude()),
         "country": country,
         "customer_number": random.randint(100000, 999999),
         "transaction_id": random.randint(1000000000000000000, 9223372036854775807),
         "account_number": f"{random.randint(100000, 999999)}-{random.randint(1000000, 9999999)}",
-        "account_type": random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.5, 0.2, 0.3], k=1)[0],
-        "amount": float(round(random.uniform(15.0, 12500.0), 2)),
+        "account_type": account_type,
+        "amount": amount,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "type": random.choices(["DEBIT", "CREDIT"], weights=[0.65, 0.35], k=1)[0],
+        "type": tx_type,
     }
     return transaction
+
 
 # Function to create Kafka topic if it does not exist
 def create_kafka_topic():
