@@ -50,7 +50,7 @@ def generate_us_transaction():
     # Generate email using firstname and lastname
     email_domain = random.choice(["gmail.com", "yahoo.com", "outlook.com", "mail.com"])
     email = f"{firstname.lower()}.{lastname.lower()}@{email_domain}"
-    birthdate = fake.date_of_birth(minimum_age=18, maximum_age=75)
+    birthdate = fake.date_of_birth(minimum_age=18, maximum_age=85)
     age = (datetime.now().year - birthdate.year)
 
     # Determine likely account type and amount range based on age group

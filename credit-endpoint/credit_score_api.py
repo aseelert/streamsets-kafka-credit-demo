@@ -76,12 +76,16 @@ def calculate_risk_score(account_type: str, amount: float, state: Optional[str],
         risk_score += 5   # SAVINGS accounts are low risk
 
     # Adjust risk based on transaction type and amount
-    if tx_type == "DEBIT" and amount > 1000:
-        risk_score += 15  # Large debits add moderate risk
-    elif tx_type == "CREDIT" and amount < 100:
-        risk_score -= 10  # Small credits reduce risk slightly
-    else:
-        risk_score += 5   # Other credits add moderate risk
+    if tx_type == "DEBIT":
+        if amount > 1000:
+            risk_score += 20  # Large debits imply significant spending, adding risk
+        else:
+            risk_score += 5   # Smaller debits add slight risk
+    elif tx_type == "CREDIT":
+        if amount < 100:
+            risk_score -= 10  # Small credits reduce risk slightly
+        else:
+            risk_score += 5   # Other credits add moderate risk
 
     # Adjust risk based on state, grouped by risk levels
 
