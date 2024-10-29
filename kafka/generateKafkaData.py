@@ -41,7 +41,7 @@ def generate_us_transaction():
         "transaction_id": random.randint(1000000000000000000, 9223372036854775807),
         "account_number": f"{random.randint(100000, 999999)}-{random.randint(1000000, 9999999)}",
         "account_type": random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.5, 0.2, 0.3], k=1)[0],
-        "amount": float(round(random.uniform(10.0, 1000.0), 2)),
+        "amount": float(round(random.uniform(15.0, 12500.0), 2)),
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "type": random.choices(["DEBIT", "CREDIT"], weights=[0.65, 0.35], k=1)[0],
     }

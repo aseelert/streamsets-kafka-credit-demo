@@ -50,21 +50,85 @@ class Transaction(BaseModel):
 transactions = []
 
 def calculate_risk_score(account_type: str, amount: float, state: Optional[str], tx_type: str) -> int:
+    """
+    Calculate a risk score between 1 and 100 based on transaction data.
+    This score reflects the risk associated with different account types, transaction types, amounts, and states.
+
+    Parameters:
+    - account_type (str): Type of the account ('LOAN', 'CHECKING', 'SAVINGS').
+    - amount (float): Amount of the transaction.
+    - state (Optional[str]): State associated with the transaction.
+    - tx_type (str): Type of the transaction ('DEBIT', 'CREDIT').
+
+    Returns:
+    - int: Risk score, with 1 being the lowest risk and 100 being the highest.
+    """
+
+    # Start with a base risk score
     risk_score = random.randint(1, 50)
+
+    # Adjust risk based on account type
     if account_type == "LOAN":
-        risk_score += 20
+        risk_score += 25  # LOAN accounts imply debt and add significant risk
     elif account_type == "CHECKING":
-        risk_score += 10
+        risk_score += 10  # CHECKING accounts add moderate risk
     elif account_type == "SAVINGS":
-        risk_score += 5
+        risk_score += 5   # SAVINGS accounts are low risk
+
+    # Adjust risk based on transaction type and amount
     if tx_type == "DEBIT" and amount > 1000:
-        risk_score += 15
+        risk_score += 15  # Large debits add moderate risk
     elif tx_type == "CREDIT" and amount < 100:
-        risk_score -= 10
-    high_risk_states = ["CA", "NY", "TX", "FL", "NV", "MD", "MO", "AK", "NC", "IL", "WA", "MA", "AZ", "MI", "NJ"]
+        risk_score -= 10  # Small credits reduce risk slightly
+    else:
+        risk_score += 5   # Other credits add moderate risk
+
+    # Adjust risk based on state, grouped by risk levels
+
+    # High-risk states: Economic volatility or high industry risks
+    high_risk_states = {
+        "CA": "California - Significant risk due to reliance on technology and entertainment industries.",
+        "NY": "New York - High risk due to economic volatility and high unemployment rates in certain areas.",
+        "TX": "Texas - High exposure to oil and gas industry, leading to economic instability.",
+        "FL": "Florida - Tourism dependence and housing market volatility increase risk.",
+        "NV": "Nevada - Heavy reliance on tourism and gambling industries, leading to economic fluctuations.",
+        "IL": "Illinois - Financial difficulties and high debt levels add significant risk."
+    }
+
+    # Medium-risk states: Moderate risk due to industry-specific dependencies
+    medium_risk_states = {
+        "OH": "Ohio - Risk due to reliance on manufacturing, especially automotive.",
+        "MI": "Michigan - Moderate risk from auto industry dependency and past economic downturns.",
+        "PA": "Pennsylvania - Manufacturing and coal industry exposure add moderate risk.",
+        "GA": "Georgia - Risk due to mixed economic stability, with reliance on both agriculture and tech.",
+        "AZ": "Arizona - Real estate-driven growth and drought concerns add moderate risk."
+    }
+
+    # Low-risk states: Generally stable economies with lower susceptibility to economic fluctuations
+    low_risk_states = {
+        "VT": "Vermont - Low risk with a small, stable economy focused on agriculture and tourism.",
+        "ND": "North Dakota - Stability due to agricultural economy with limited economic volatility.",
+        "SD": "South Dakota - Minimal economic risk with low reliance on volatile industries.",
+        "ID": "Idaho - Stable, largely agricultural and tech-growing economy.",
+        "NE": "Nebraska - Agriculture-focused and low unemployment, leading to lower economic risk."
+    }
+
+    # Check if the state is in one of the high, medium, or low-risk groups and adjust accordingly
     if state in high_risk_states:
-        risk_score += 10
+        risk_score += 10  # High-risk states add significant risk
+        logger.info(f"High-risk state: {state} - {high_risk_states[state]}")
+    elif state in medium_risk_states:
+        risk_score += 5  # Medium-risk states add moderate risk
+        logger.info(f"Medium-risk state: {state} - {medium_risk_states[state]}")
+    elif state in low_risk_states:
+        risk_score -= 5  # Low-risk states reduce risk slightly
+        logger.info(f"Low-risk state: {state} - {low_risk_states[state]}")
+    else:
+        logger.info(f"Other state: {state} - No additional risk adjustment applied.")
+
+    # Ensure the score is clamped between 1 and 100 to avoid out-of-bounds values
     return min(max(risk_score, 1), 100)
+
 
 @app.post("/calculate-risk-score")
 async def calculate_risk_score_endpoint(transaction: Transaction):

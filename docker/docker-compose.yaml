@@ -33,6 +33,8 @@ services:
     environment:
       - KAFKA_CLUSTERS_0_NAME=Local_Kafka
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9194
+    volumes:
+      - kafka_ui_data:/config  # Persistent storage for Kafka UI config
     ports:
       - 8194:8080
 
@@ -46,7 +48,7 @@ services:
       POSTGRES_PASSWORD: fraud_pass
       POSTGRES_DB: fraud_detection
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data  # Persistent storage for PostgreSQL
     ports:
       - 5542:5432
 
@@ -58,6 +60,8 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: ${DEFAULT_PASSWORD}
+    volumes:
+      - postgres_ui_data:/var/lib/pgadmin  # Persistent storage for pgAdmin4
     ports:
       - 5150:80
     depends_on:
@@ -72,6 +76,8 @@ services:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=${DEFAULT_PASSWORD}
     command: server /data --console-address ":9101"
+    volumes:
+      - minio_data:/data  # Persistent storage for MinIO data
     ports:
       - 9100:9000
       - 9101:9101
@@ -99,3 +105,28 @@ services:
     restart: always
     networks:
       - streamsets-network
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: ibmas-ss-metabase
+    hostname: metabase
+    volumes:
+      - metabase_data:/metabase-data  # Persistent storage for Metabase data
+      - /dev/urandom:/dev/random:ro
+    ports:
+      - 3010:3000
+    networks:
+      - streamsets-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "-I", "http://localhost:3010/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+# Define persistent volumes
+volumes:
+  postgres_data:
+  metabase_data:
+  kafka_ui_data:
+  postgres_ui_data:
+  minio_data:
