@@ -8,6 +8,7 @@ from datetime import datetime
 import argparse
 from tqdm import tqdm  # for progress bar
 from dotenv import load_dotenv
+import os
 
 # Configuration variables for Kafka connection
 bootstrap_server = os.getenv("HOST_IP")
