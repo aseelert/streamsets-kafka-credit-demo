@@ -7,12 +7,13 @@ import random
 from datetime import datetime
 import argparse
 from tqdm import tqdm  # for progress bar
+from dotenv import load_dotenv
 
 # Configuration variables for Kafka connection
-bootstrap_server = "9.153.103.108"
+bootstrap_server = os.getenv("HOST_IP")
 bootstrap_server_port = 9192
 bootstrap_servers = f"{bootstrap_server}:{bootstrap_server_port}"
-
+print(f"Connecting to Kafka at {bootstrap_server}")
 # Initialize Faker with only the 'en_US' locale
 fake = Faker('en_US')
 
