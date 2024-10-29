@@ -149,7 +149,8 @@ async def calculate_risk_score_endpoint(transaction: Transaction):
         transactions.append(transaction_data)
         if len(transactions) > 1000:
             transactions.pop(0)
-        logger.info(f"Processed transaction: {transaction_data}")
+        if risk_score > 50:
+            logger.info(f"Processed transaction: {transaction_data}")
         return {"risk_score_value": risk_score, "risk_score_algo_version": "a25-27"}
     except Exception as e:
         logger.error(f"Error processing transaction: {e}")
