@@ -53,6 +53,21 @@ services:
     ports:
       - 5542:5432
 
+  postgres-history:
+    image: postgres:latest
+    networks:
+      - streamsets-network
+    container_name: ibmas-ss-postgres-history
+    environment:
+      POSTGRES_USER: fraud_user
+      POSTGRES_PASSWORD: fraud_pass
+      POSTGRES_DB: fraud_detection
+    volumes:
+      - ./init-history.sql:/docker-entrypoint-initdb.d/init-history.sql
+      - postgres_data_history:/var/lib/postgresql/data  # Persistent storage for PostgreSQL
+    ports:
+      - 5642:5432
+
   postgres_ui:
     image: dpage/pgadmin4:latest
     networks:
@@ -67,6 +82,7 @@ services:
       - 5150:80
     depends_on:
       - postgres
+      - postgres-history
 
   minio:
     image: minio/minio:latest
@@ -147,7 +163,9 @@ services:
 volumes:
   mysql_data:
   postgres_data:
+  postgres_data_history:
   metabase_data:
   kafka_ui_data:
   postgres_ui_data:
   minio_data:
+
