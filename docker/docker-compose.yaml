@@ -126,8 +126,25 @@ services:
       timeout: 5s
       retries: 5
 
+  mysql:
+    image: mysql:latest
+    container_name: ibmas-ss-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DEFAULT_PASSWORD}
+      MYSQL_DATABASE: fraud
+      MYSQL_USER: fraud_user
+      MYSQL_PASSWORD: fraud_pass
+
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql       # Persist data
+      - ./mysql-init:/docker-entrypoint-initdb.d/fraud.sql # Run init.sql
+    restart: always
+
 # Define persistent volumes
 volumes:
+  mysql_data:
   postgres_data:
   metabase_data:
   kafka_ui_data:
