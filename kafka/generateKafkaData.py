@@ -1,3 +1,4 @@
+import os
 from kafka import KafkaProducer, KafkaAdminClient
 from kafka.admin import NewTopic
 import json
@@ -8,7 +9,6 @@ from datetime import datetime
 import argparse
 from tqdm import tqdm  # for progress bar
 from dotenv import load_dotenv
-import os
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,6 +18,7 @@ bootstrap_server = os.getenv("HOST_IP")
 bootstrap_server_port = 9192
 bootstrap_servers = f"{bootstrap_server}:{bootstrap_server_port}"
 print(f"Connecting to Kafka at {bootstrap_server}")
+
 # Initialize Faker with only the 'en_US' locale
 fake = Faker('en_US')
 
@@ -26,22 +27,30 @@ email_providers = ["gmail.com", "yahoo.com", "outlook.com", "mail.com",
                    "aol.com", "icloud.com", "comcast.net", "msn.com",
                    "live.com", "protonmail.com"]
 
+# Population-weighted state selection (all 50 states, population in millions)
+states_population = [
+    ("CA", 39.24), ("TX", 30.17), ("FL", 22.24), ("NY", 19.85), ("PA", 13.02),
+    ("IL", 12.58), ("OH", 11.78), ("GA", 11.00), ("NC", 10.67), ("MI", 10.05),
+    ("NJ", 9.26), ("VA", 8.68), ("WA", 7.88), ("AZ", 7.28), ("MA", 7.07),
+    ("TN", 7.05), ("IN", 6.83), ("MO", 6.17), ("MD", 6.17), ("WI", 5.93),
+    ("CO", 5.81), ("MN", 5.64), ("SC", 5.19), ("AL", 5.04), ("LA", 4.62),
+    ("KY", 4.52), ("OR", 4.24), ("OK", 4.00), ("CT", 3.61), ("UT", 3.34),
+    ("IA", 3.21), ("NV", 3.11), ("AR", 3.04), ("MS", 2.94), ("KS", 2.94),
+    ("NM", 2.12), ("NE", 1.97), ("WV", 1.79), ("ID", 1.90), ("HI", 1.46),
+    ("NH", 1.39), ("ME", 1.36), ("MT", 1.12), ("RI", 1.09), ("DE", 1.02),
+    ("SD", 0.91), ("ND", 0.77), ("AK", 0.74), ("VT", 0.64), ("WY", 0.58)
+]
+
+# Unpack states and weights for random selection
+states, weights = zip(*states_population)
+
+
+states, weights = zip(*states_population)  # Unpack states and weights for random selection
+
 def generate_us_transaction():
     """
     Generate a sample financial transaction with age-based account type and amount adjustments.
-
-    The function simulates realistic financial behavior by varying transaction types and amounts
-    based on the age of the individual:
-
-    Age Group Influence:
-    --------------------
-    - Younger People (<25 years): Focus on smaller checking and savings transactions.
-    - Middle Age (25-40 years): Higher chance of loans and larger amounts.
-    - Older Adults (40+ years): Larger loans, stable savings, moderate credit.
-
-    This structure provides a realistic financial dataset for testing and analysis.
     """
-
     firstname = fake.first_name()
     lastname = fake.last_name()
     country = "United States"
@@ -66,6 +75,9 @@ def generate_us_transaction():
     tx_type = random.choices(["DEBIT", "CREDIT"], weights=[0.7, 0.3], k=1)[0]
     amount = round(amount, 2)
 
+    # Select a state with population-weighted probability
+    state = random.choices(states, weights=weights, k=1)[0]
+
     # Ensure realistic latitude and longitude within the U.S.
     latitude, longitude = generate_us_coordinates()
 
@@ -77,7 +89,7 @@ def generate_us_transaction():
         "birthdate": birthdate.strftime("%Y-%m-%d"),
         "email": email,
         "city": fake.city(),
-        "state": fake.state_abbr(),
+        "state": state,
         "address": fake.address(),
         "latitude": latitude,
         "longitude": longitude,
@@ -95,13 +107,11 @@ def generate_us_transaction():
 def generate_us_coordinates():
     """
     Generate realistic latitude and longitude within U.S. bounds.
-    Returns approximate values for landmarks within the U.S.
     """
-    latitude = round(random.uniform(24.396308, 49.384358), 6)   # U.S. latitude range
-    longitude = round(random.uniform(-125.0, -66.93457), 6)     # U.S. longitude range
+    latitude = round(random.uniform(24.396308, 49.384358), 6)
+    longitude = round(random.uniform(-125.0, -66.93457), 6)
     return latitude, longitude
 
-# Function to create Kafka topic if it does not exist
 def create_kafka_topic(topic_name):
     try:
         admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
@@ -115,8 +125,7 @@ def create_kafka_topic(topic_name):
     except Exception as e:
         print(f"Error creating topic '{topic_name}': {e}")
 
-# Function to send data to Kafka in random-sized batches with progress tracking
-def send_data_to_kafka(total_records=10000, topic_name="txs", retries=5):
+def send_data_to_kafka(records=10000, batch=1000, interval=10, topic_name="txs", retries=5):
     for attempt in range(retries):
         try:
             producer = KafkaProducer(
@@ -126,44 +135,40 @@ def send_data_to_kafka(total_records=10000, topic_name="txs", retries=5):
             print("Successfully connected to Kafka broker.")
             create_kafka_topic(topic_name)
 
-            # Initialize progress bar
-            with tqdm(total=total_records, desc="Sending transactions to Kafka") as pbar:
+            with tqdm(total=records, desc="Sending transactions to Kafka") as pbar:
                 records_sent = 0
 
-                while records_sent < total_records:
-                    # Generate a random batch size, constrained by remaining records
-                    batch_size = min(random.randint(500, 1000), total_records - records_sent)
+                while records_sent < records:
+                    batch_size = min(batch, records - records_sent)
                     transactions = [generate_us_transaction() for _ in range(batch_size)]
-                    print(f"Generated batch of {batch_size} US-based transactions")
+                    print(f"Generated batch of {batch_size} transactions.")
 
-                    # Send each transaction in the batch to Kafka
                     for transaction in transactions:
                         producer.send(topic_name, transaction)
 
-                    # Flush the batch to ensure all records are sent
                     producer.flush()
                     records_sent += batch_size
                     pbar.update(batch_size)
 
-                    # Wait 10 seconds before the next batch
-                    time.sleep(10)
+                    time.sleep(interval)
 
-                print(f"Total of {total_records} transactions sent to Kafka topic '{topic_name}'.")
-                break  # Exit loop if connection is successful
+                print(f"Total of {records} transactions sent to Kafka topic '{topic_name}'.")
+                break
 
         except Exception as e:
             print(f"Attempt {attempt + 1}: Unable to connect to Kafka or send message: {e}")
             if attempt < retries - 1:
-                time.sleep(5)  # Wait before retrying
+                time.sleep(5)
             else:
                 print("Max retries reached. Exiting.")
                 break
 
-# Parse command-line arguments
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Send generated transaction data to Kafka.")
-    parser.add_argument("--total_records", type=int, default=10000, help="Total number of records to send.")
+    parser.add_argument("-r", "--records", type=int, default=10000, help="Total number of records to send.")
+    parser.add_argument("-b", "--batch", type=int, default=1000, help="Batch size for each Kafka send.")
+    parser.add_argument("-i", "--interval", type=int, default=10, help="Interval (seconds) between batches.")
     parser.add_argument("--topic_name", type=str, default="txs", help="Kafka topic name to send data to.")
     args = parser.parse_args()
 
-    send_data_to_kafka(total_records=args.total_records, topic_name=args.topic_name)
+    send_data_to_kafka(records=args.records, batch=args.batch, interval=args.interval, topic_name=args.topic_name)
