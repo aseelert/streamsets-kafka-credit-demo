@@ -1,5 +1,5 @@
 {
-    "tableName": "transactions",
+    "tableName": "txs",
     "schemaName": "default",
     "topicName": "txs",
     "message": {
@@ -23,7 +23,7 @@
             {
                 "name": "birthdate",
                 "mapping": "birthdate",
-                "type": "DATE"
+                "type": "VARCHAR"
             },
             {
                 "name": "email",
@@ -88,7 +88,7 @@
             {
                 "name": "timestamp",
                 "mapping": "timestamp",
-                "type": "TIMESTAMP"
+                "type": "VARCHAR"
             },
             {
                 "name": "type",
