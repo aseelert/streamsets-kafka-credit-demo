@@ -49,10 +49,25 @@ states, weights = zip(*states_population)  # Unpack states and weights for rando
 
 def generate_us_transaction():
     """
-    Generate a sample financial transaction with age-based account type and amount adjustments.
+    Generate a sample financial transaction with realistic age distribution.
     """
+    # Age distribution weights based on US demographic data
+    age_ranges = [
+        (18, 24, 0.12),  # 12% young adults
+        (25, 34, 0.23),  # 23% millennials
+        (35, 44, 0.22),  # 22% younger Gen X
+        (45, 54, 0.20),  # 20% older Gen X
+        (55, 64, 0.15),  # 15% younger boomers
+        (65, 85, 0.08),  # 8% older population
+    ]
+
+    # Select age range based on weights
+    min_age, max_age, _ = random.choices(age_ranges, weights=[r[2] for r in age_ranges], k=1)[0]
+    birthdate = fake.date_of_birth(minimum_age=min_age, maximum_age=max_age)
+    age = (datetime.now().year - birthdate.year)
+
     # Generate gender first
-    gender = random.choice(['M', 'F'])  # or use fake.random_element(['M', 'F'])
+    gender = random.choice(['M', 'F'])
 
     # Generate gender-specific names
     if gender == 'M':
@@ -66,19 +81,26 @@ def generate_us_transaction():
 
     # Generate email using firstname and lastname
     email = f"{firstname.lower()}.{lastname.lower()}@{random.choice(email_providers)}"
-    birthdate = fake.date_of_birth(minimum_age=18, maximum_age=85)
-    age = (datetime.now().year - birthdate.year)
 
-    # Determine account type and amount based on age group
+    # Adjust account types and amounts based on more realistic age groups
     if age < 25:
-        account_type = random.choices(["CHECKING", "SAVINGS"], weights=[0.7, 0.3], k=1)[0]
-        amount = random.uniform(10, 500) if account_type == "SAVINGS" else random.uniform(10, 1000)
-    elif 25 <= age < 40:
-        account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.5, 0.2, 0.3], k=1)[0]
-        amount = random.uniform(100, 10000) if account_type == "LOAN" else random.uniform(100, 3000) if account_type == "CHECKING" else random.uniform(50, 1500)
-    else:
+        account_type = random.choices(["CHECKING", "SAVINGS"], weights=[0.8, 0.2], k=1)[0]
+        amount = random.uniform(20, 800) if account_type == "SAVINGS" else random.uniform(50, 1500)
+    elif 25 <= age < 35:
+        account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.5, 0.3, 0.2], k=1)[0]
+        amount = random.uniform(1000, 15000) if account_type == "LOAN" else \
+                random.uniform(100, 4000) if account_type == "CHECKING" else \
+                random.uniform(500, 5000)
+    elif 35 <= age < 50:
         account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.4, 0.3, 0.3], k=1)[0]
-        amount = random.uniform(5000, 20000) if account_type == "LOAN" else random.uniform(200, 5000) if account_type == "CHECKING" else random.uniform(100, 3000)
+        amount = random.uniform(5000, 30000) if account_type == "LOAN" else \
+                random.uniform(500, 8000) if account_type == "CHECKING" else \
+                random.uniform(1000, 15000)
+    else:
+        account_type = random.choices(["CHECKING", "SAVINGS", "LOAN"], weights=[0.35, 0.45, 0.2], k=1)[0]
+        amount = random.uniform(10000, 50000) if account_type == "LOAN" else \
+                random.uniform(1000, 10000) if account_type == "CHECKING" else \
+                random.uniform(5000, 50000)
 
     # DEBIT/CREDIT probability with higher DEBIT likelihood
     tx_type = random.choices(["DEBIT", "CREDIT"], weights=[0.7, 0.3], k=1)[0]
