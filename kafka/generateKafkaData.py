@@ -119,6 +119,9 @@ def generate_us_transaction():
 
     country = "United States"
 
+    # Add bias logic for females between 42 and 47
+    bias = "YES" if gender == 'F' and 42 <= age <= 47 else ""
+
     # Generate email using firstname and lastname
     email = f"{firstname.lower()}.{lastname.lower()}@{random.choice(email_providers)}"
 
@@ -152,11 +155,14 @@ def generate_us_transaction():
     # Get a real city and its coordinates for the selected state
     city, latitude, longitude = get_city_for_state(state)
 
+
+
     # Construct transaction data
     transaction = {
         "firstname": firstname,
         "lastname": lastname,
         "gender": gender,
+        "bias": bias,
         "name": f"{firstname} {lastname}",
         "birthdate": birthdate.strftime("%Y-%m-%d"),
         "age": age,

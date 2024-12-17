@@ -26,6 +26,11 @@
                 "type": "VARCHAR"
             },
             {
+                "name": "bias",
+                "mapping": "bias",
+                "type": "VARCHAR"
+            },
+            {
                 "name": "birthdate",
                 "mapping": "birthdate",
                 "type": "VARCHAR"
