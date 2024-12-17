@@ -21,9 +21,19 @@
                 "type": "VARCHAR"
             },
             {
+                "name": "gender",
+                "mapping": "gender",
+                "type": "VARCHAR"
+            },
+            {
                 "name": "birthdate",
                 "mapping": "birthdate",
                 "type": "VARCHAR"
+            },
+            {
+                "name": "age",
+                "mapping": "age",
+                "type": "INTEGER"
             },
             {
                 "name": "email",
@@ -39,6 +49,16 @@
                 "name": "state",
                 "mapping": "state",
                 "type": "VARCHAR"
+            },
+            {
+                "name": "latitude",
+                "mapping": "latitude",
+                "type": "DOUBLE"
+            },
+            {
+                "name": "longitude",
+                "mapping": "longitude",
+                "type": "DOUBLE"
             },
             {
                 "name": "address",
