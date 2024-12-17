@@ -163,7 +163,7 @@ def generate_us_transaction():
         "email": email,
         "city": city,
         "state": state,
-        "address": fake.street_name(),
+        "address": fake.street_address(),
         "latitude": latitude,
         "longitude": longitude,
         "country": country,
