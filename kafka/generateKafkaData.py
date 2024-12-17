@@ -262,7 +262,7 @@ def show_last_n_records(topic_name, n=10):
     """
     # Configuration variables for Kafka connection
     bootstrap_server = os.getenv("HOST_IP")
-    bootstrap_server_port = 9192
+    bootstrap_server_port = int(os.getenv("KAFKA_PORT", "9192"))
     bootstrap_servers = f"{bootstrap_server}:{bootstrap_server_port}"
 
     print(f"Connecting to Kafka at {bootstrap_servers}")
@@ -273,7 +273,7 @@ def show_last_n_records(topic_name, n=10):
         value_deserializer=lambda x: json.loads(x.decode('utf-8')),
         auto_offset_reset='latest',  # Start reading from the end
         enable_auto_commit=False,    # Don't commit offsets
-        consumer_timeout_ms=5000     # Timeout after 5 seconds of no messages
+        consumer_timeout_ms=2000     # Timeout after 5 seconds of no messages
     )
 
     # Subscribe to the topic
