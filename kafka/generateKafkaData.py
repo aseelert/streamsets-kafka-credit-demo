@@ -17,7 +17,7 @@ load_dotenv()
 
 # Configuration variables for Kafka connection
 bootstrap_server = os.getenv("HOST_IP")
-bootstrap_server_port = 9192
+bootstrap_server_port = int(os.getenv("KAFKA_PORT", "9192"))
 bootstrap_servers = f"{bootstrap_server}:{bootstrap_server_port}"
 print(f"Connecting to Kafka at {bootstrap_server}")
 
@@ -196,47 +196,69 @@ def create_kafka_topic(topic_name):
     except Exception as e:
         print(f"Error creating topic '{topic_name}': {e}")
 
-def send_data_to_kafka(records=10000, batch=1000, interval=10, topic_name="txs", retries=5):
+def send_data_to_kafka(records=10000, batch=1000, interval=10, topic_name="txs", retries=5, output_mode="kafka"):
+    transactions_data = []
+
     for attempt in range(retries):
         try:
-            producer = KafkaProducer(
-                bootstrap_servers=bootstrap_servers,
-                value_serializer=lambda v: json.dumps(v).encode('utf-8')
-            )
-            print("Successfully connected to Kafka broker.")
-            create_kafka_topic(topic_name)
+            # Only initialize Kafka producer if needed
+            if output_mode in ["kafka", "both"]:
+                producer = KafkaProducer(
+                    bootstrap_servers=bootstrap_servers,
+                    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+                )
+                print("Successfully connected to Kafka broker.")
+                create_kafka_topic(topic_name)
 
-            with tqdm(total=records, desc="Sending transactions to Kafka") as pbar:
+            with tqdm(total=records, desc="Processing transactions") as pbar:
                 records_sent = 0
 
                 while records_sent < records:
                     batch_size = min(batch, records - records_sent)
                     transactions = [generate_us_transaction() for _ in range(batch_size)]
-                    print(f"Generated batch of {batch_size} transactions.")
 
-                    for transaction in transactions:
-                        producer.send(topic_name, transaction)
+                    if output_mode in ["kafka", "both"]:
+                        print(f"Generated batch of {batch_size} transactions.")
+                        for transaction in transactions:
+                            producer.send(topic_name, transaction)
+                        producer.flush()
 
-                    producer.flush()
+                    if output_mode in ["csv", "both"]:
+                        transactions_data.extend(transactions)
+
                     records_sent += batch_size
                     pbar.update(batch_size)
 
-                    time.sleep(interval)
+                    # Only sleep between batches if sending to Kafka
+                    if output_mode in ["kafka", "both"]:
+                        time.sleep(interval)
 
-                print(f"Total of {records} transactions sent to Kafka topic '{topic_name}'.")
+                if output_mode in ["kafka", "both"]:
+                    print(f"Total of {records} transactions sent to Kafka topic '{topic_name}'.")
+
+                if output_mode in ["csv", "both"]:
+                    df = pd.DataFrame(transactions_data)
+                    csv_filename = f"transactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                    df.to_csv(csv_filename, index=False)
+                    print(f"Transactions saved to {csv_filename}")
                 break
 
         except Exception as e:
-            print(f"Attempt {attempt + 1}: Unable to connect to Kafka or send message: {e}")
-            if attempt < retries - 1:
-                time.sleep(5)
+            if output_mode in ["kafka", "both"]:
+                print(f"Attempt {attempt + 1}: Error processing transactions: {e}")
+                if attempt < retries - 1:
+                    time.sleep(5)
+                else:
+                    print("Max retries reached. Exiting.")
+                    break
             else:
-                print("Max retries reached. Exiting.")
+                # For CSV-only mode, just print the error and break
+                print(f"Error processing transactions: {e}")
                 break
 
-def show_last_n_records(topic_name):
+def show_last_n_records(topic_name, n=10):
     """
-    Show the last 10 records from a Kafka topic using pandas DataFrame
+    Show the last n records from a Kafka topic using pandas DataFrame
     """
     # Configuration variables for Kafka connection
     bootstrap_server = os.getenv("HOST_IP")
@@ -318,9 +340,19 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--batch", type=int, default=1000, help="Batch size for each Kafka send.")
     parser.add_argument("-i", "--interval", type=int, default=10, help="Interval (seconds) between batches.")
     parser.add_argument("--topic_name", type=str, default="txs", help="Kafka topic name to send data to.")
+    parser.add_argument("-lm", "--last-messages", type=int, default=10, help="Number of last messages to display.")
+    parser.add_argument("-m", "--mode", type=str, choices=["kafka", "csv", "both"],
+                       default="kafka", help="Output mode: kafka, csv, or both")
     args = parser.parse_args()
 
-    send_data_to_kafka(records=args.records, batch=args.batch, interval=args.interval, topic_name=args.topic_name)
+    send_data_to_kafka(
+        records=args.records,
+        batch=args.batch,
+        interval=args.interval,
+        topic_name=args.topic_name,
+        output_mode=args.mode
+    )
 
-    # Show last records from the same topic
-    show_last_n_records(topic_name=args.topic_name)
+    # Only show last records if using Kafka
+    if args.mode in ["kafka", "both"]:
+        show_last_n_records(args.topic_name, args.last_messages)
