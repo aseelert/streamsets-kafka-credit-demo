@@ -1,0 +1,100 @@
+{
+    "tableName": "txs",
+    "schemaName": "default",
+    "topicName": "txs",
+    "message": {
+        "dataFormat": "json",
+        "fields": [
+            {
+                "name": "firstname",
+                "mapping": "firstname",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "lastname",
+                "mapping": "lastname",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "name",
+                "mapping": "name",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "birthdate",
+                "mapping": "birthdate",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "email",
+                "mapping": "email",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "city",
+                "mapping": "city",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "state",
+                "mapping": "state",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "address",
+                "mapping": "address",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "latitude",
+                "mapping": "latitude",
+                "type": "DOUBLE"
+            },
+            {
+                "name": "longitude",
+                "mapping": "longitude",
+                "type": "DOUBLE"
+            },
+            {
+                "name": "country",
+                "mapping": "country",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "customer_number",
+                "mapping": "customer_number",
+                "type": "INTEGER"
+            },
+            {
+                "name": "transaction_id",
+                "mapping": "transaction_id",
+                "type": "BIGINT"
+            },
+            {
+                "name": "account_number",
+                "mapping": "account_number",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "account_type",
+                "mapping": "account_type",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "amount",
+                "mapping": "amount",
+                "type": "DOUBLE"
+            },
+            {
+                "name": "timestamp",
+                "mapping": "timestamp",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "type",
+                "mapping": "type",
+                "type": "VARCHAR"
+            }
+        ]
+    }
+}
