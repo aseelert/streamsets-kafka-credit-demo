@@ -51,8 +51,17 @@ def generate_us_transaction():
     """
     Generate a sample financial transaction with age-based account type and amount adjustments.
     """
-    firstname = fake.first_name()
-    lastname = fake.last_name()
+    # Generate gender first
+    gender = random.choice(['M', 'F'])  # or use fake.random_element(['M', 'F'])
+
+    # Generate gender-specific names
+    if gender == 'M':
+        firstname = fake.first_name_male()
+        lastname = fake.last_name()
+    else:
+        firstname = fake.first_name_female()
+        lastname = fake.last_name()
+
     country = "United States"
 
     # Generate email using firstname and lastname
@@ -85,8 +94,10 @@ def generate_us_transaction():
     transaction = {
         "firstname": firstname,
         "lastname": lastname,
+        "gender": gender,
         "name": f"{firstname} {lastname}",
         "birthdate": birthdate.strftime("%Y-%m-%d"),
+        "age": age,
         "email": email,
         "city": fake.city(),
         "state": state,
