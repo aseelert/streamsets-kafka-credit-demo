@@ -1,5 +1,5 @@
 import os
-from kafka import KafkaProducer, KafkaAdminClient
+from kafka import KafkaProducer, KafkaAdminClient, KafkaConsumer
 from kafka.admin import NewTopic
 import json
 import time
@@ -9,6 +9,8 @@ from datetime import datetime
 import argparse
 from tqdm import tqdm  # for progress bar
 from dotenv import load_dotenv
+from geonamescache import GeonamesCache
+import pandas as pd  # Add this to imports at the top
 
 # Load environment variables from .env file
 load_dotenv()
@@ -44,8 +46,46 @@ states_population = [
 # Unpack states and weights for random selection
 states, weights = zip(*states_population)
 
+# Initialize GeonamesCache once
+gc = GeonamesCache()
+us_cities = gc.get_cities()
 
-states, weights = zip(*states_population)  # Unpack states and weights for random selection
+def generate_us_coordinates():
+    """
+    Generate random coordinates within the continental US bounds.
+    Returns a tuple of (latitude, longitude)
+    """
+    # Continental US bounds (approximately)
+    min_lat, max_lat = 24.396308, 49.384358  # Southernmost to Northernmost points
+    min_lon, max_lon = -125.000000, -66.934570  # Westernmost to Easternmost points
+
+    return (
+        random.uniform(min_lat, max_lat),
+        random.uniform(min_lon, max_lon)
+    )
+
+def get_city_for_state(state_code):
+    """
+    Get a random real city and its coordinates for a given state.
+    """
+    # Filter cities for the given state
+    state_cities = [
+        city for city in us_cities.values()
+        if city['countrycode'] == 'US' and
+        city['admin1code'] == state_code
+    ]
+
+    if not state_cities:
+        # Fallback if no cities found
+        return fake.city(), generate_us_coordinates()
+
+    # Select a random city from the filtered list
+    city_data = random.choice(state_cities)
+    return (
+        city_data['name'],
+        float(city_data['latitude']),
+        float(city_data['longitude'])
+    )
 
 def generate_us_transaction():
     """
@@ -109,8 +149,8 @@ def generate_us_transaction():
     # Select a state with population-weighted probability
     state = random.choices(states, weights=weights, k=1)[0]
 
-    # Ensure realistic latitude and longitude within the U.S.
-    latitude, longitude = generate_us_coordinates()
+    # Get a real city and its coordinates for the selected state
+    city, latitude, longitude = get_city_for_state(state)
 
     # Construct transaction data
     transaction = {
@@ -121,9 +161,9 @@ def generate_us_transaction():
         "birthdate": birthdate.strftime("%Y-%m-%d"),
         "age": age,
         "email": email,
-        "city": fake.city(),
+        "city": city,
         "state": state,
-        "address": fake.address(),
+        "address": fake.street_name(),
         "latitude": latitude,
         "longitude": longitude,
         "country": country,
@@ -136,14 +176,6 @@ def generate_us_transaction():
         "type": tx_type,
     }
     return transaction
-
-def generate_us_coordinates():
-    """
-    Generate realistic latitude and longitude within U.S. bounds.
-    """
-    latitude = round(random.uniform(24.396308, 49.384358), 6)
-    longitude = round(random.uniform(-125.0, -66.93457), 6)
-    return latitude, longitude
 
 def create_kafka_topic(topic_name):
     try:
@@ -196,6 +228,84 @@ def send_data_to_kafka(records=10000, batch=1000, interval=10, topic_name="txs",
                 print("Max retries reached. Exiting.")
                 break
 
+def show_last_n_records(topic_name):
+    """
+    Show the last 10 records from a Kafka topic using pandas DataFrame
+    """
+    # Configuration variables for Kafka connection
+    bootstrap_server = os.getenv("HOST_IP")
+    bootstrap_server_port = 9192
+    bootstrap_servers = f"{bootstrap_server}:{bootstrap_server_port}"
+
+    print(f"Connecting to Kafka at {bootstrap_servers}")
+
+    # Create consumer that starts reading from the end
+    consumer = KafkaConsumer(
+        bootstrap_servers=bootstrap_servers,
+        value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+        auto_offset_reset='latest',  # Start reading from the end
+        enable_auto_commit=False,    # Don't commit offsets
+        consumer_timeout_ms=5000     # Timeout after 5 seconds of no messages
+    )
+
+    # Subscribe to the topic
+    consumer.subscribe([topic_name])
+
+    # Wait for partition assignment
+    while not consumer.assignment():
+        consumer.poll(timeout_ms=1000)
+
+    # Get the end offsets for each partition
+    partitions = consumer.partitions_for_topic(topic_name)
+    if not partitions:
+        print(f"Topic '{topic_name}' not found")
+        return
+
+    # Create a list to store the last n records
+    last_records = []
+
+    try:
+        # Seek to end and then back by n messages for each partition
+        for partition in consumer.assignment():
+            # Get the end offset
+            end_offset = consumer.end_offsets([partition])[partition]
+            # Calculate start offset (end - n)
+            start_offset = max(0, end_offset - 10)
+            # Seek to start offset
+            consumer.seek(partition, start_offset)
+
+        # Read messages
+        while len(last_records) < 10:
+            messages = consumer.poll(timeout_ms=1000)
+            if not messages:
+                break
+            for partition_messages in messages.values():
+                for message in partition_messages:
+                    last_records.append(message.value)
+                    if len(last_records) >= 10:
+                        break
+                if len(last_records) >= 10:
+                    break
+
+    finally:
+        consumer.close()
+
+    # Convert records to pandas DataFrame
+    if last_records:
+        df = pd.DataFrame(last_records)
+
+        # Format the DataFrame
+        pd.set_option('display.max_columns', None)  # Show all columns
+        pd.set_option('display.width', None)        # Don't wrap to multiple lines
+        pd.set_option('display.max_colwidth', None) # Show full content of each cell
+        pd.set_option('display.max_rows', None)     # Show all rows
+
+        print(f"\nLast {len(last_records)} records from topic '{topic_name}':")
+        print(df.to_string(index=False))
+    else:
+        print(f"\nNo records found in topic '{topic_name}'")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Send generated transaction data to Kafka.")
     parser.add_argument("-r", "--records", type=int, default=10000, help="Total number of records to send.")
@@ -205,3 +315,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     send_data_to_kafka(records=args.records, batch=args.batch, interval=args.interval, topic_name=args.topic_name)
+
+    # Show last records from the same topic
+    show_last_n_records(topic_name=args.topic_name)

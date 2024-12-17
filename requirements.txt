@@ -2,3 +2,4 @@ docker
 kafka-python
 faker
 python-dotenv
+geonamescache
