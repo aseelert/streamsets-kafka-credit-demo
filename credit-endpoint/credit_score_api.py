@@ -180,10 +180,7 @@ async def get_dashboard_data():
     response = {
         "risk_below_50": risk_below_50,
         "risk_above_50": risk_above_50,
-        "last_records": transactions,
-        "bias": bias,
-        "age": age,
-        "gender": gender
+        "last_records": transactions
     }
 
     logger.info("Sending dashboard data response.")
