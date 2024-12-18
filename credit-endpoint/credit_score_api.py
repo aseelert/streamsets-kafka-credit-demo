@@ -45,25 +45,28 @@ class Transaction(BaseModel):
     amount: float
     state: Optional[str] = None
     type: str
+    bias: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
 
 # In-memory storage for recent transactions
 transactions = []
 
-def calculate_risk_score(account_type: str, amount: float, state: Optional[str], tx_type: str) -> int:
+def calculate_risk_score(account_type: str, amount: float, state: Optional[str], tx_type: str, bias: Optional[str], age: Optional[int], gender: Optional[str]) -> int:
     """
     Calculate a risk score between 1 and 100 based on transaction data.
-    This score reflects the risk associated with different account types, transaction types, amounts, and states.
+    This score reflects the risk associated with different account types, transaction types, amounts, states,
+    and demographic factors.
 
     Parameters:
-    - account_type (str): Type of the account ('LOAN', 'CHECKING', 'SAVINGS').
-    - amount (float): Amount of the transaction.
-    - state (Optional[str]): State associated with the transaction.
-    - tx_type (str): Type of the transaction ('DEBIT', 'CREDIT').
-
-    Returns:
-    - int: Risk score, with 1 being the lowest risk and 100 being the highest.
+    - account_type (str): Type of the account ('LOAN', 'CHECKING', 'SAVINGS')
+    - amount (float): Amount of the transaction
+    - state (Optional[str]): State associated with the transaction
+    - tx_type (str): Type of the transaction ('DEBIT', 'CREDIT')
+    - bias (Optional[str]): Bias indicator ("YES" or "")
+    - age (Optional[int]): Age of the customer
+    - gender (Optional[str]): Gender of the customer ('M' or 'F')
     """
-
     # Start with a base risk score
     risk_score = random.randint(1, 50)
 
@@ -86,6 +89,11 @@ def calculate_risk_score(account_type: str, amount: float, state: Optional[str],
             risk_score -= 10  # Small credits reduce risk slightly
         else:
             risk_score += 5   # Other credits add moderate risk
+
+
+    # This is a bias for age and female to enable IBM AutoAI and WatsonX.Governance use case
+    if gender == 'F' and bias == "YES" and age is not None and 42 <= age <= 47:
+        risk_score += 17  # Add significant risk for biased demographic
 
     # Adjust risk based on state, grouped by risk levels
 
@@ -141,7 +149,10 @@ async def calculate_risk_score_endpoint(transaction: Transaction):
             transaction.account_type,
             transaction.amount,
             transaction.state,
-            transaction.type
+            transaction.type,
+            transaction.bias,
+            transaction.age,
+            transaction.gender
         )
         transaction_data = transaction.dict()
         transaction_data["risk_score"] = risk_score
@@ -169,7 +180,10 @@ async def get_dashboard_data():
     response = {
         "risk_below_50": risk_below_50,
         "risk_above_50": risk_above_50,
-        "last_records": transactions
+        "last_records": transactions,
+        "bias": bias,
+        "age": age,
+        "gender": gender
     }
 
     logger.info("Sending dashboard data response.")

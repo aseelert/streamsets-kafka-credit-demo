@@ -13,12 +13,15 @@ def generate_random_transaction():
     amount = round(random.uniform(10.0, 2000.0), 2)
     state = random.choice(["CA", "NY", "TX", None])  # Include some higher-risk states
     tx_type = random.choice(["DEBIT", "CREDIT"])
-    
+
     transaction = {
         "account_type": account_type,
         "amount": amount,
         "state": state,
-        "type": tx_type
+        "type": tx_type,
+        "bias": bias,
+        "age": age,
+        "gender": gender
     }
     return transaction
 
