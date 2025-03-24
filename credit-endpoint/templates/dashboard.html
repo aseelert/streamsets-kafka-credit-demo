@@ -2,219 +2,1186 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="10">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Credit Score Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f3f5; color: #333; }
-        .container { max-width: 1200px; margin: auto; padding: 20px; }
-        h1, h2 { color: #333; }
-        .description { font-size: 0.8em; margin-bottom: 20px; color: #555; }
-        .dashboard { display: flex; gap: 20px; }
-        .charts { display: flex; flex-direction: column; align-items: center; width: 45%; gap: 20px; }
-        .pie-chart, .account-chart { width: 100%; max-width: 400px; }
-        .total-count { font-size: 0.8em; margin-bottom: 15px; color: #333; font-weight: bold; text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .transactions { font-size: 0.8em; width: 55%; max-height: 600px; overflow-y: auto; background-color: #fff; border-radius: 8px; padding: 10px; }
-        .account-type { font-weight: bold; color: #007acc; font-size: 1.1em; }
-        .footer { margin-top: 30px; font-size: 0.9em; color: #888; text-align: center; }
-        .error-message { color: red; font-size: 1.2em; margin-top: 20px; }
-        .no-data { color: #888; font-size: 1.2em; margin-top: 20px; text-align: center; }
+        :root {
+            --primary-purple: #8B5CF6;
+            --dark-purple: #6D28D9;
+            --light-purple: #A78BFA;
+            --dark-bg: #FFFFFF;
+            --darker-bg: #F9FAFB;
+            --card-bg: #FFFFFF;
+            --text-primary: #111827;
+            --text-secondary: #4B5563;
+            --border-color: #E5E7EB;
+        }
 
-        /* State risk table styling */
-        .legend-table { width: 100%; margin-top: 20px; }
-        .legend-table, .legend-table th, .legend-table td { border: 1px solid #ddd; border-collapse: collapse; padding: 8px; text-align: left; }
-        .legend-table th { background-color: #f4f4f4; font-weight: bold; color: #333; }
-        .high-risk { font-size: 0.8em;background-color: #FFCCCC; } /* Red for high-risk states */
-        .medium-risk { font-size: 0.8em;background-color: #FFEDCC; } /* Orange for medium-risk states */
-        .low-risk { font-size: 0.8em;background-color: #E0E0E0; } /* Gray for low-risk states */
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Credit Score Dashboard</h1>
-        <p class="description">This dashboard provides insights into processed transactions for risk analysis. Data is sourced from a live API, categorizing risk scores and analyzing account types.</p>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            margin: 0;
+            min-height: 100vh;
+        }
 
-        <div class="error-message" id="errorMessage"></div>
-        <div id="totalCount" class="total-count"></div>
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
 
-        <!-- State Risk Levels Legend in Tabular Format -->
-        <h2>State Risk Levels</h2>
-        <table class="legend-table">
-            <thead>
-                <tr>
-                    <th>Risk Level</th>
-                    <th>State</th>
-                    <th>Reason</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="high-risk">
-                    <td>High-Risk</td>
-                    <td>CA (California), NY (New York), TX (Texas), FL (Florida), NV (Nevada), IL (Illinois)</td>
-                    <td>Economic volatility, industry dependence (e.g., tech, tourism, oil)</td>
-                </tr>
-                <tr class="medium-risk">
-                    <td>Medium-Risk</td>
-                    <td>OH (Ohio), MI (Michigan), PA (Pennsylvania), GA (Georgia), AZ (Arizona)</td>
-                    <td>Moderate risk due to industry-specific dependencies like manufacturing</td>
-                </tr>
-                <tr class="low-risk">
-                    <td>Low-Risk</td>
-                    <td>VT (Vermont), ND (North Dakota), SD (South Dakota), ID (Idaho), NE (Nebraska)</td>
-                    <td>Generally stable economies, lower susceptibility to economic fluctuations</td>
-                </tr>
-            </tbody>
-        </table>
+        .header {
+            background: var(--darker-bg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-bottom: 2px solid var(--primary-purple);
+        }
 
-        <!-- Main Dashboard Layout with Transactions Table and Charts -->
-        <div class="dashboard">
-            <!-- Transaction Table -->
-            <div class="transactions">
-                <h2>Last 1000 Transactions</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Account Type</th>
-                            <th>Amount</th>
-                            <th>State</th>
-                            <th>Type</th>
-                            <th>Risk Score</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionTableBody"></tbody>
-                </table>
-                <p id="noDataMessage" class="no-data"></p>
-            </div>
+        .header h1 {
+            font-size: 1.875rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin: 0;
+            text-align: center;
+        }
 
-            <!-- Charts Section -->
-            <div class="charts">
-                <div class="pie-chart"><canvas id="riskChart"></canvas></div>
-                <div class="account-chart"><canvas id="accountTypeRiskChart"></canvas></div>
-            </div>
-        </div>
+        .card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
+        }
 
-        <div class="footer">
-            <p>Dashboard Version: 1.2</p>
-        </div>
-    </div>
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--primary-purple);
+            padding-bottom: 0.5rem;
+        }
 
-    <script src="/static/chart.js"></script>
-    <script>
-        const highRiskStates = ["CA", "NY", "TX", "FL", "NV", "IL"];
-        const mediumRiskStates = ["OH", "MI", "PA", "GA", "AZ"];
-        const lowRiskStates = ["VT", "ND", "SD", "ID", "NE"];
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
 
-        async function fetchDashboardData() {
-            try {
-                const response = await fetch('/api/dashboard-data');
-                if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-                const data = await response.json();
-                updateTotalCount(data);
-                updatePieChart(data.risk_below_50, data.risk_above_50);
-                updateAccountTypeRiskChart(data.last_records);
-                updateTransactionTable(data.last_records);
-                document.getElementById("errorMessage").textContent = "";
-            } catch (error) {
-                document.getElementById("errorMessage").textContent = "Failed to load data. Check server logs.";
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
-        function updateTotalCount(data) {
-            const totalCount = data.risk_below_50 + data.risk_above_50;
-            const below50Percent = ((data.risk_below_50 / totalCount) * 100).toFixed(1);
-            const above50Percent = ((data.risk_above_50 / totalCount) * 100).toFixed(1);
-            document.getElementById("totalCount").textContent = `Total Transactions Processed: ${totalCount} (Risk < 50: ${below50Percent}%, Risk >= 50: ${above50Percent}%)`;
+        .bg-gray-50 {
+            background-color: var(--darker-bg);
         }
 
-        function updatePieChart(riskBelow50, riskAbove50) {
-            const ctx = document.getElementById('riskChart').getContext('2d');
-            if (window.riskChart instanceof Chart) window.riskChart.destroy();
+        .rounded-lg {
+            border-radius: 0.5rem;
+        }
 
-            window.riskChart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: [`Risk < 50 (${((riskBelow50 / (riskBelow50 + riskAbove50)) * 100).toFixed(1)}%)`,
-                             `Risk >= 50 (${((riskAbove50 / (riskBelow50 + riskAbove50)) * 100).toFixed(1)}%)`],
-                    datasets: [{
-                        data: [riskBelow50, riskAbove50],
-                        backgroundColor: ['#4CAF50', '#FF5252']
-                    }]
+        .p-4 {
+            padding: 1rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+
+        .text-lg {
+            font-size: 1.125rem;
+        }
+
+        .font-medium {
+            font-weight: 500;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-gray-600 {
+            color: var(--text-secondary);
+        }
+
+        .text-gray-900 {
+            color: var(--text-primary);
+        }
+
+        .space-y-2 > * + * {
+            margin-top: 0.5rem;
+        }
+
+        .pre {
+            background-color: var(--darker-bg);
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            font-family: monospace;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .transaction-card {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .transaction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        .risk-score {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .risk-score.low {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #059669;
+        }
+
+        .risk-score.high {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #DC2626;
+        }
+
+        .amount {
+            color: var(--primary-purple);
+            font-weight: 500;
+        }
+
+        .account-type {
+            color: var(--primary-purple);
+            font-weight: 600;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .chart-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .filter-active {
+            border: 2px solid var(--primary-purple);
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-card:hover {
+            border-color: var(--primary-purple);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary-purple);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-purple);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            background: var(--darker-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-button:hover {
+            background: var(--primary-purple);
+            border-color: var(--primary-purple);
+            color: white;
+        }
+
+        .filter-button.active {
+            background: var(--primary-purple);
+            border-color: var(--primary-purple);
+            color: white;
+        }
+
+        .risk-distribution {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .risk-box {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .risk-box.low {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid #059669;
+        }
+
+        .risk-box.high {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid #DC2626;
+        }
+
+        .risk-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .risk-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .risk-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .recent-records {
+            margin-top: 2rem;
+        }
+
+        .record-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .record-card {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+        }
+
+        .record-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-purple);
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .record-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .record-label {
+            color: var(--text-secondary);
+        }
+
+        .record-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .pagination-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            background: var(--darker-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-button:hover {
+            background: var(--primary-purple);
+            border-color: var(--primary-purple);
+            color: white;
+        }
+
+        .pagination-button.active {
+            background: var(--primary-purple);
+            border-color: var(--primary-purple);
+            color: white;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .loading-spinner {
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid var(--darker-bg);
+            border-top-color: var(--primary-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .records-per-page {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .records-per-page select {
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            background: var(--darker-bg);
+            color: var(--text-primary);
+        }
+
+        .state-chart-container {
+            grid-column: auto;  /* Remove full width */
+        }
+
+        .state-chart {
+            height: 300px;  /* Match other chart heights */
+            overflow-y: auto;
+        }
+    </style>
+    <script src="/static/js/chart.umd.js"></script>
+    <script src="/static/js/index.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Credit Score Dashboard</h1>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Live Dashboard Section -->
+            <div class="card">
+                <h2>Live Dashboard</h2>
+
+                <!-- Stats Overview -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalTransactions">0</div>
+                        <div class="stat-label">Total Transactions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgRiskScore">0</div>
+                        <div class="stat-label">Average Risk Score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="highRiskCount">0</div>
+                        <div class="stat-label">High Risk Transactions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalAmount">$0</div>
+                        <div class="stat-label">Total Amount</div>
+                    </div>
+                </div>
+
+                <!-- Risk Distribution Boxes -->
+                <div class="risk-distribution">
+                    <div class="risk-box low">
+                        <div class="risk-number" id="risk-below-50">0</div>
+                        <div class="risk-label">Low Risk Transactions</div>
+                    </div>
+                    <div class="risk-box high">
+                        <div class="risk-number" id="risk-above-50">0</div>
+                        <div class="risk-label">High Risk Transactions</div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="chart-grid">
+                    <!-- Risk Score Distribution -->
+                    <div class="chart-card">
+                        <h3 class="chart-title">Risk Score Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="riskChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Risk by Account Type -->
+                    <div class="chart-card">
+                        <h3 class="chart-title">Risk by Account Type</h3>
+                        <div class="chart-container">
+                            <canvas id="accountTypeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Risk by Transaction Type -->
+                    <div class="chart-card">
+                        <h3 class="chart-title">Risk by Transaction Type</h3>
+                        <div class="chart-container">
+                            <canvas id="transactionTypeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Risk by State -->
+                    <div class="chart-card">
+                        <h3 class="chart-title">Risk by State</h3>
+                        <div class="chart-container">
+                            <canvas id="stateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Buttons -->
+                <div class="filter-buttons">
+                    <button class="filter-button active" data-filter="all">All Transactions</button>
+                    <button class="filter-button" data-filter="low">Low Risk (< 50)</button>
+                    <button class="filter-button" data-filter="high">High Risk (≥ 50)</button>
+                    <button class="filter-button" data-filter="loan">Loan Accounts</button>
+                    <button class="filter-button" data-filter="checking">Checking Accounts</button>
+                    <button class="filter-button" data-filter="savings">Savings Accounts</button>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="card">
+                    <h2>Recent Transactions</h2>
+                    <div class="records-per-page">
+                        <span>Records per page:</span>
+                        <select id="recordsPerPage">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="loading" id="recordsLoading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    <div class="record-grid" id="recent-records">
+                        <!-- Records will be populated here -->
+                    </div>
+                    <div class="pagination" id="pagination">
+                        <!-- Pagination buttons will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Documentation Section -->
+            <div class="card">
+                <h2>API Documentation</h2>
+
+                <!-- Dashboard Data Endpoint -->
+                <div class="mb-4">
+                    <h3 class="text-lg font-medium">GET /api/dashboard-data</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600">Get dashboard statistics and recent transactions.</p>
+                        <div class="space-y-2">
+                            <h4 class="font-medium">Example:</h4>
+                            <pre class="pre">curl -X GET http://localhost:8000/api/dashboard-data</pre>
+                            <h4 class="font-medium">Response:</h4>
+                            <pre class="pre">
+{
+    "risk_below_50": "number",
+    "risk_above_50": "number",
+    "last_records": [
+        {
+            "account_type": "string",
+            "amount": "number",
+            "state": "string",
+            "type": "string",
+            "bias": "string",
+            "age": "number",
+            "gender": "string",
+            "risk_score": "number",
+            "timestamp": "string"
+        }
+    ]
+}</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calculate Risk Score Endpoint -->
+                <div class="mb-4">
+                    <h3 class="text-lg font-medium">POST /calculate-risk-score</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600">Calculate a risk score based on transaction data.</p>
+                        <div class="space-y-2">
+                            <h4 class="font-medium">Example:</h4>
+                            <pre class="pre">curl -X POST http://localhost:8000/calculate-risk-score \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_type": "LOAN",
+    "amount": 5000.00,
+    "state": "CA",
+    "type": "DEBIT",
+    "bias": "YES",
+    "age": 35,
+    "gender": "M"
+  }'</pre>
+                            <h4 class="font-medium">Request Body:</h4>
+                            <pre class="pre">
+{
+    "account_type": "string (LOAN, CHECKING, SAVINGS)",
+    "amount": "number",
+    "state": "string (optional)",
+    "type": "string (DEBIT, CREDIT)",
+    "bias": "string (optional, YES or empty)",
+    "age": "number (optional)",
+    "gender": "string (optional, M or F)"
+}</pre>
+                            <h4 class="font-medium">Response:</h4>
+                            <pre class="pre">
+{
+    "risk_score_value": "number (1-100)",
+    "risk_score_algo_version": "string"
+}</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Examples Section -->
+                <div class="mb-4">
+                    <h3 class="text-lg font-medium">Additional Examples</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-medium">Checking Account Example:</h4>
+                                <pre class="pre">curl -X POST http://localhost:8000/calculate-risk-score \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_type": "CHECKING",
+    "amount": 2500.00,
+    "state": "NY",
+    "type": "CREDIT"
+  }'</pre>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">Savings Account Example:</h4>
+                                <pre class="pre">curl -X POST http://localhost:8000/calculate-risk-score \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_type": "SAVINGS",
+    "amount": 10000.00,
+    "state": "VT",
+    "type": "DEBIT",
+    "age": 45,
+    "gender": "F"
+  }'</pre>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">High Risk State Example:</h4>
+                                <pre class="pre">curl -X POST http://localhost:8000/calculate-risk-score \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_type": "LOAN",
+    "amount": 15000.00,
+    "state": "TX",
+    "type": "DEBIT",
+    "bias": "YES"
+  }'</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentData = null;
+        let currentFilter = 'all';
+        let charts = {};
+        let currentPage = 1;
+        let recordsPerPage = 25;
+        let totalPages = 1;
+
+        // State name mapping
+        const stateNames = {
+            'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+            'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+            'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+            'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+            'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
+            'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
+            'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
+            'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+            'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
+            'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
+            'DC': 'District of Columbia', 'PR': 'Puerto Rico', 'VI': 'U.S. Virgin Islands',
+            'GU': 'Guam', 'MP': 'Northern Mariana Islands', 'AS': 'American Samoa'
+        };
+
+        // State risk categories
+        const stateRiskCategories = {
+            // High risk states
+            'CA': 'high', 'NY': 'high', 'TX': 'high', 'FL': 'high', 'NV': 'high', 'IL': 'high',
+            // Medium risk states
+            'OH': 'medium', 'MI': 'medium', 'PA': 'medium', 'GA': 'medium', 'AZ': 'medium',
+            // Low risk states
+            'VT': 'low', 'ND': 'low', 'SD': 'low', 'ID': 'low', 'NE': 'low'
+        };
+
+        // Function to update stats
+        function updateStats(data) {
+            const totalTransactions = data.last_records.length;
+            const avgRiskScore = Math.round(data.last_records.reduce((sum, tx) => sum + tx.risk_score, 0) / totalTransactions);
+            const highRiskCount = data.last_records.filter(tx => tx.risk_score >= 50).length;
+            const totalAmount = data.last_records.reduce((sum, tx) => sum + tx.amount, 0);
+
+            document.getElementById('totalTransactions').textContent = totalTransactions;
+            document.getElementById('avgRiskScore').textContent = avgRiskScore;
+            document.getElementById('highRiskCount').textContent = highRiskCount;
+            document.getElementById('totalAmount').textContent = `$${totalAmount.toFixed(2)}`;
+
+            // Update risk distribution boxes
+            document.getElementById('risk-below-50').textContent = data.risk_below_50;
+            document.getElementById('risk-above-50').textContent = data.risk_above_50;
+        }
+
+        // Function to filter transactions
+        function filterTransactions(data, filter) {
+            switch(filter) {
+                case 'low':
+                    return data.last_records.filter(tx => tx.risk_score < 50);
+                case 'high':
+                    return data.last_records.filter(tx => tx.risk_score >= 50);
+                case 'loan':
+                    return data.last_records.filter(tx => tx.account_type === 'LOAN');
+                case 'checking':
+                    return data.last_records.filter(tx => tx.account_type === 'CHECKING');
+                case 'savings':
+                    return data.last_records.filter(tx => tx.account_type === 'SAVINGS');
+                default:
+                    return data.last_records;
+            }
+        }
+
+        // Function to update pagination
+        function updatePagination(totalRecords) {
+            totalPages = Math.ceil(totalRecords / recordsPerPage);
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            // Previous button
+            pagination.innerHTML += `
+                <button class="pagination-button" ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">
+                    Previous
+                </button>
+            `;
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (
+                    i === 1 || // First page
+                    i === totalPages || // Last page
+                    (i >= currentPage - 2 && i <= currentPage + 2) // Pages around current page
+                ) {
+                    pagination.innerHTML += `
+                        <button class="pagination-button ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">
+                            ${i}
+                        </button>
+                    `;
+                } else if (
+                    i === currentPage - 3 ||
+                    i === currentPage + 3
+                ) {
+                    pagination.innerHTML += `<span class="pagination-button">...</span>`;
+                }
+            }
+
+            // Next button
+            pagination.innerHTML += `
+                <button class="pagination-button" ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">
+                    Next
+                </button>
+            `;
+        }
+
+        // Function to change page
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            if (currentData) {
+                updateRecordsDisplay(currentData);
+            }
+        }
+
+        // Function to update records display
+        function updateRecordsDisplay(data) {
+            const recordsContainer = document.getElementById('recent-records');
+            const loadingSpinner = document.getElementById('recordsLoading');
+            loadingSpinner.style.display = 'flex';
+
+            // Filter records based on current filter
+            const filteredRecords = filterTransactions(data, currentFilter);
+
+            // Calculate pagination
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const paginatedRecords = filteredRecords.slice(startIndex, endIndex);
+
+            // Update pagination
+            updatePagination(filteredRecords.length);
+
+            // Update records display
+            recordsContainer.innerHTML = paginatedRecords.map(record => `
+                <div class="record-card">
+                    <div class="record-header">
+                        <span class="account-type">${record.account_type}</span>
+                        <span class="risk-score ${record.risk_score < 50 ? 'low' : 'high'}">
+                            Risk: ${record.risk_score}
+                        </span>
+                    </div>
+                    <div class="record-details">
+                        <span class="record-label">Amount:</span>
+                        <span class="record-value">$${record.amount.toFixed(2)}</span>
+                        <span class="record-label">Type:</span>
+                        <span class="record-value">${record.type}</span>
+                        <span class="record-label">State:</span>
+                        <span class="record-value">${record.state ? stateNames[record.state] || record.state : 'N/A'}</span>
+                        <span class="record-label">Age:</span>
+                        <span class="record-value">${record.age || 'N/A'}</span>
+                        <span class="record-label">Gender:</span>
+                        <span class="record-value">${record.gender || 'N/A'}</span>
+                        <span class="record-label">Bias:</span>
+                        <span class="record-value">${record.bias || 'N/A'}</span>
+                        <span class="record-label">Time:</span>
+                        <span class="record-value">${record.timestamp}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            loadingSpinner.style.display = 'none';
+        }
+
+        // Event listener for records per page change
+        document.getElementById('recordsPerPage').addEventListener('change', (e) => {
+            recordsPerPage = parseInt(e.target.value);
+            currentPage = 1;
+            if (currentData) {
+                updateRecordsDisplay(currentData);
+            }
+        });
+
+        // Function to update charts with data aggregation
+        function updateCharts(data) {
+            currentData = data;
+            updateStats(data);
+
+            // Aggregate data for better performance
+            const aggregatedData = {
+                riskDistribution: {
+                    low: data.risk_below_50,
+                    high: data.risk_above_50
                 },
-                options: { responsive: true, plugins: { legend: { position: 'top' }}}
-            });
-        }
-
-        function updateAccountTypeRiskChart(transactions) {
-            const accountTypeCounts = {
-                CHECKING: { risky: 0, notRisky: 0 },
-                SAVINGS: { risky: 0, notRisky: 0 },
-                LOAN: { risky: 0, notRisky: 0 }
+                accountTypes: aggregateByField(data.last_records, 'account_type'),
+                transactionTypes: aggregateByField(data.last_records, 'type'),
+                states: aggregateByField(data.last_records, 'state')
             };
 
-            transactions.forEach(t => {
-                const riskCategory = t.risk_score >= 50 ? 'risky' : 'notRisky';
-                accountTypeCounts[t.account_type][riskCategory] += 1;
+            // Update charts with aggregated data
+            updateRiskChart(aggregatedData.riskDistribution);
+            updateAccountTypeChart(aggregatedData.accountTypes);
+            updateTransactionTypeChart(aggregatedData.transactionTypes);
+            updateStateChart(aggregatedData.states);
+        }
+
+        // Helper function to aggregate data by field
+        function aggregateByField(records, field) {
+            const aggregation = {};
+            records.forEach(record => {
+                const value = record[field] || 'Unknown';
+                if (!aggregation[value]) {
+                    aggregation[value] = {
+                        count: 0,
+                        totalRisk: 0
+                    };
+                }
+                aggregation[value].count++;
+                aggregation[value].totalRisk += record.risk_score;
             });
+            return aggregation;
+        }
 
-            const labels = ["CHECKING", "SAVINGS", "LOAN"];
-            const riskyData = labels.map(label => accountTypeCounts[label].risky);
-            const notRiskyData = labels.map(label => accountTypeCounts[label].notRisky);
+        // Update individual charts
+        function updateRiskChart(data) {
+            const riskCtx = document.getElementById('riskChart').getContext('2d');
+            if (charts.risk) charts.risk.destroy();
+            charts.risk = new Chart(riskCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low Risk (< 50)', 'High Risk (≥ 50)'],
+                    datasets: [{
+                        data: [data.low, data.high],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',  // Green for low risk
+                            'rgba(239, 68, 68, 0.8)'   // Red for high risk
+                        ],
+                        borderColor: [
+                            'rgba(16, 185, 129, 1)',   // Darker green border
+                            'rgba(239, 68, 68, 1)'     // Darker red border
+                        ],
+                        borderWidth: 2,
+                        hoverOffset: 4,
+                        hoverBorderWidth: 3,
+                        spacing: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#111827',
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                },
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
 
-            const ctx = document.getElementById('accountTypeRiskChart').getContext('2d');
-            if (window.accountTypeRiskChart instanceof Chart) window.accountTypeRiskChart.destroy();
-
-            window.accountTypeRiskChart = new Chart(ctx, {
+        function updateAccountTypeChart(data) {
+            const accountTypeCtx = document.getElementById('accountTypeChart').getContext('2d');
+            if (charts.accountType) charts.accountType.destroy();
+            charts.accountType = new Chart(accountTypeCtx, {
                 type: 'bar',
                 data: {
-                    labels: labels,
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: Object.values(data).map(d => Math.round(d.totalRisk / d.count)),
+                        backgroundColor: '#8B5CF6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: '#111827' },
+                            grid: { color: '#E5E7EB' }
+                        },
+                        x: {
+                            ticks: { color: '#111827' },
+                            grid: { color: '#E5E7EB' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#111827' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTransactionTypeChart(data) {
+            const transactionTypeCtx = document.getElementById('transactionTypeChart').getContext('2d');
+            if (charts.transactionType) charts.transactionType.destroy();
+            charts.transactionType = new Chart(transactionTypeCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: Object.values(data).map(d => Math.round(d.totalRisk / d.count)),
+                        backgroundColor: '#8B5CF6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: '#111827' },
+                            grid: { color: '#E5E7EB' }
+                        },
+                        x: {
+                            ticks: { color: '#111827' },
+                            grid: { color: '#E5E7EB' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#111827' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateStateChart(data) {
+            const stateCtx = document.getElementById('stateChart').getContext('2d');
+            if (charts.state) charts.state.destroy();
+
+            // Sort states by average risk score and take top 20
+            const sortedStates = Object.entries(data)
+                .sort(([, a], [, b]) => (b.totalRisk / b.count) - (a.totalRisk / a.count))
+                .slice(0, 20);  // Take only top 20 states
+
+            // Create datasets for each risk category
+            const highRiskData = sortedStates.map(([state, d]) =>
+                stateRiskCategories[state] === 'high' ? Math.round(d.totalRisk / d.count) : null
+            );
+            const mediumRiskData = sortedStates.map(([state, d]) =>
+                stateRiskCategories[state] === 'medium' ? Math.round(d.totalRisk / d.count) : null
+            );
+            const lowRiskData = sortedStates.map(([state, d]) =>
+                stateRiskCategories[state] === 'low' ? Math.round(d.totalRisk / d.count) : null
+            );
+            const otherData = sortedStates.map(([state, d]) =>
+                !stateRiskCategories[state] ? Math.round(d.totalRisk / d.count) : null
+            );
+
+            charts.state = new Chart(stateCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedStates.map(([state]) => stateNames[state] || state),
                     datasets: [
-                        { label: 'Not Risky (Risk < 50)', data: notRiskyData, backgroundColor: '#4CAF50' },
-                        { label: 'Risky (Risk >= 50)', data: riskyData, backgroundColor: '#FF5252' }
+                        {
+                            label: 'High Risk States',
+                            data: highRiskData,
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)',  // Red
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1,
+                            order: 1
+                        },
+                        {
+                            label: 'Medium Risk States',
+                            data: mediumRiskData,
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',  // Orange
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1,
+                            order: 2
+                        },
+                        {
+                            label: 'Low Risk States',
+                            data: lowRiskData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',  // Green
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1,
+                            order: 3
+                        },
+                        {
+                            label: 'Other States',
+                            data: otherData,
+                            backgroundColor: 'rgba(139, 92, 246, 0.8)',  // Purple
+                            borderColor: 'rgba(139, 92, 246, 1)',
+                            borderWidth: 1,
+                            order: 4
+                        }
                     ]
                 },
                 options: {
                     responsive: true,
-                    scales: { y: { beginAtZero: true } },
-                    plugins: { legend: { position: 'top' } },
-                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: '#111827' },
+                            grid: { color: '#E5E7EB' }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#111827',
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            grid: { color: '#E5E7EB' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#111827' },
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Risk Score: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
                 }
             });
         }
 
-        function updateTransactionTable(transactions) {
-            const tableBody = document.getElementById('transactionTableBody');
-            tableBody.innerHTML = '';
-
-            transactions.slice(-1000).forEach((transaction) => {
-                const row = document.createElement('tr');
-                let stateClass = '';
-
-                if (highRiskStates.includes(transaction.state)) {
-                    stateClass = 'high-risk';
-                } else if (mediumRiskStates.includes(transaction.state)) {
-                    stateClass = 'medium-risk';
-                } else if (lowRiskStates.includes(transaction.state)) {
-                    stateClass = 'low-risk';
-                }
-
-                row.innerHTML = `
-                    <td>${transaction.timestamp}</td>
-                    <td class="account-type">${transaction.account_type}</td>
-                    <td>$${transaction.amount.toFixed(2)}</td>
-                    <td class="${stateClass}">${transaction.state || 'N/A'}</td>
-                    <td>${transaction.type}</td>
-                    <td>${transaction.risk_score}</td>
-                `;
-                tableBody.appendChild(row);
-            });
+        // Function to fetch and update dashboard data
+        async function updateDashboard() {
+            try {
+                const response = await fetch('/api/dashboard-data');
+                const data = await response.json();
+                updateCharts(data);
+                updateRecordsDisplay(data);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
         }
 
-        fetchDashboardData();
-        setInterval(fetchDashboardData, 10000);
+        // Event listeners for filter buttons
+        document.querySelectorAll('.filter-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentFilter = button.dataset.filter;
+                currentPage = 1; // Reset to first page when filter changes
+                if (currentData) {
+                    updateRecordsDisplay(currentData);
+                }
+            });
+        });
+
+        // Update dashboard every 5 seconds
+        updateDashboard();
+        setInterval(updateDashboard, 5000);
     </script>
 </body>
 </html>
