@@ -25,18 +25,37 @@ services:
       - 9194:9194
       - 9195:9195
 
-  kafka_ui:
-    image: provectuslabs/kafka-ui:latest
+  kafka-schema:
+    image: 'docker.io/bitnami/schema-registry:latest'
     networks:
       - streamsets-network
-    container_name: ibmas-ss-kafka_ui
+    container_name: ibmas-ss-kafka-schema
+    restart: always
     environment:
-      - KAFKA_CLUSTERS_0_NAME=Local_Kafka
+      - SCHEMA_REGISTRY_KAFKA_BROKERS=PLAINTEXT://kafka:9194
+      - SCHEMA_REGISTRY_HOST_NAME=schema-registry
+      - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
+    volumes:
+      - kafka_schema_data:/bitnami
+    ports:
+      - 8081:8081
+
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.1.0
+    networks:
+    - streamsets-network
+    container_name: ibmas-ss-kafka_ui
+    restart: always
+    environment:
+      - DYNAMIC_CONFIG_ENABLED=true
+      - KAFKA_CLUSTERS_0_NAME=kafka
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9194
+      - KAFKA_CLUSTERS_0_SCHEMAREGISTRY=http://kafka-schema:8081
+      - KAFKA_CLUSTERS_0_SERDES=AVRO
     volumes:
       - kafka_ui_data:/config  # Persistent storage for Kafka UI config
     ports:
-      - 8194:8080
+      - 8195:8080
 
   postgres:
     image: postgres:latest
@@ -110,6 +129,17 @@ services:
     networks:
       - streamsets-network
 
+  streamsets611:
+    image: streamsets/datacollector:JDK17_6.1.1
+    container_name: ibmas-ss-streamsets-611
+    env_file:
+      - .env611  # Load environment variables from the .env file
+    restart: always
+    ports:
+      - "18631:18630"
+    networks:
+      - streamsets-network
+
   credit_score_api:
     build:
       context: ../credit-endpoint
@@ -165,7 +195,8 @@ volumes:
   postgres_data:
   postgres_data_history:
   metabase_data:
-  kafka_ui_data:
   postgres_ui_data:
   minio_data:
-
+  kafka_data:
+  kafka_schema_data:
+  kafka_ui_data:
